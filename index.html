@@ -693,14 +693,16 @@ canvas{display:block;}
   <div class="screen-body">
     <div class="auth-card">
       <h3>SIGN IN / SIGN UP / GUEST</h3>
-      <div class="auth-row"><input id="authEmail" class="auth-in" placeholder="Email"><input id="authPass" class="auth-in" type="password" placeholder="Password"></div>
-      <div class="auth-row"><input id="authUser" class="auth-in" placeholder="Username"></div>
-      <div class="auth-row">
-        <button class="mm-btn" onclick="AUTH.signIn()">SIGN IN</button>
-        <button class="mm-btn" onclick="AUTH.signUp()">SIGN UP</button>
-        <button class="mm-btn" onclick="AUTH.google()">GOOGLE</button>
-        <button class="mm-btn" onclick="AUTH.guest()">GUEST</button>
-      </div>
+      <form id="authForm" onsubmit="event.preventDefault();AUTH.signIn();">
+        <div class="auth-row"><input id="authEmail" class="auth-in" type="email" autocomplete="email" placeholder="Email"><input id="authPass" class="auth-in" type="password" autocomplete="current-password" placeholder="Password"></div>
+        <div class="auth-row"><input id="authUser" class="auth-in" autocomplete="username" placeholder="Username"></div>
+        <div class="auth-row">
+          <button class="mm-btn" type="submit">SIGN IN</button>
+          <button class="mm-btn" type="button" onclick="AUTH.signUp()">SIGN UP</button>
+          <button class="mm-btn" type="button" onclick="AUTH.google()">GOOGLE</button>
+          <button class="mm-btn" type="button" onclick="AUTH.guest()">GUEST</button>
+        </div>
+      </form>
       <div class="meta">By continuing you agree to Terms & Privacy. More games: https://thegeneric10.github.io</div>
     </div>
     <div class="auth-card">
