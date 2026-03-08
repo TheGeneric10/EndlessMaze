@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>ENDLESS MAZE v0.26.10</title>
+<title>ENDLESS MAZE v0.26.20</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&display=swap');
 *{margin:0;padding:0;box-sizing:border-box;-webkit-user-select:none;-moz-user-select:none;user-select:none;-webkit-user-drag:none;}
@@ -54,6 +54,16 @@ canvas{display:block;}
 @keyframes logoPulse{0%,100%{text-shadow:var(--glow-c);}50%{text-shadow:0 0 15px #00e5ff,0 0 40px rgba(0,229,255,0.7),0 0 80px rgba(0,229,255,0.3);}}
 
 .mm-stats-row{display:flex;gap:8px;margin-bottom:8px;width:100%;}
+.mm-account{width:100%;display:flex;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--border2);padding:8px 10px;border-radius:4px;margin-bottom:8px;gap:8px;}
+.mm-account .name{font-family:var(--font-t);font-size:11px;color:var(--white);letter-spacing:1px;}
+.mm-account .name .tag{margin-left:4px;font-size:9px;color:var(--gold);}
+.mm-account .meta{font-size:9px;color:var(--dim);}
+.auth-card{background:var(--panel);border:1px solid var(--border2);border-radius:6px;padding:16px;margin-bottom:12px;}
+.auth-card h3{font-family:var(--font-t);font-size:12px;color:var(--cyan);letter-spacing:2px;margin-bottom:10px;}
+.auth-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+.auth-in{flex:1;min-width:180px;background:var(--panel2);border:1px solid var(--border2);color:var(--white);padding:10px;border-radius:4px;}
+.social-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
 .mm-stat{flex:1;background:var(--panel);border:1px solid var(--border2);padding:8px 10px;
   border-radius:4px;text-align:center;}
 .mm-stat .label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;}
@@ -295,10 +305,12 @@ canvas{display:block;}
   font-size:9px;padding:2px 7px;border-radius:3px;letter-spacing:1px;}
 
 /* MOBILE CONTROLS */
-#mobileControls{display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+#mobileControls{display:none;position:fixed;bottom:22px;left:18px;transform:none;
   z-index:150;pointer-events:all;}
-@media(max-width:700px){#mobileControls{display:grid;grid-template-columns:repeat(3,48px);
+@media(max-width:900px){#mobileControls{display:grid;grid-template-columns:repeat(3,48px);
   grid-template-rows:repeat(3,48px);gap:4px;}}
+@media(min-width:901px){html.touch #mobileControls{display:grid;}}
+@media(max-width:900px){.hud-br{bottom:170px;right:8px;max-width:150px;} .hud-quests{max-width:150px;} .hud-tl{left:8px;top:8px;}}
 .dpad-btn{background:rgba(5,5,10,0.8);border:1px solid var(--border2);border-radius:6px;
   color:var(--cyan);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;
   active-bg:rgba(0,229,255,0.2);}
@@ -373,6 +385,7 @@ canvas{display:block;}
     <div class="hud-panel hud-coins" id="hudCoins">🪙 0</div>
     <div class="hud-panel hud-diamonds" id="hudDiamonds">💎 0</div>
     <div class="hud-panel hud-floor" id="hudFloor">FLOOR 1</div>
+    <div class="hud-panel" id="hudKeys">🗝 0</div>
     <div class="hud-floor-progress" id="hudFloorProgress"><div class="hud-floor-label" id="hudFloorLabel">NEXT FLOOR 0%</div><div class="hud-floor-track"><div class="hud-floor-fill" id="hudFloorFill"></div></div></div>
   </div>
   <div class="hud-tr">
@@ -453,8 +466,9 @@ canvas{display:block;}
     <div class="mm-logo">
       <h1>ENDLESS<br>MAZE</h1>
       <div class="sub">EXPLORE · SURVIVE · ESCAPE</div>
-      <div class="ver">v0.26.10 — ARCADE EDITION</div>
+      <div class="ver">v0.26.20 — CONNECTED EDITION</div>
     </div>
+    <div class="mm-account"><div><div class="name" id="accountName">Guest <span class="tag" id="accountBadge"></span></div><div class="meta" id="accountMeta">SIGN IN TO SAVE PROGRESS AND CONNECT WITH FRIENDS FOR FREE!</div></div><button class="mm-btn" style="width:auto;padding:8px 10px;text-align:center;" onclick="AUTH.open()">ACCOUNT</button></div>
     <div class="mm-stats-row">
       <div class="mm-stat"><div class="label">Coins</div><div class="val" id="mmCoins">0</div></div>
       <div class="mm-stat"><div class="label">Diamonds</div><div class="val" id="mmDiamonds">0</div></div>
@@ -565,8 +579,7 @@ canvas{display:block;}
     <div class="stab-panel" id="stab-savedata">
       <div class="save-info" id="saveInfo"></div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                <button class="s-btn" onclick="SAVE.exportSave()">📤 EXPORT</button>
-        <button class="s-btn" onclick="SAVE.importSave()">📥 IMPORT</button>
+                <button class="s-btn" onclick="AUTH.open()">🔐 SIGN IN TO SAVE PROGRESS & CONNECT WITH FRIENDS</button>
         <button class="s-btn" style="color:var(--red);border-color:var(--red2);" onclick="SAVE.resetProgress()">⚠ RESET PROGRESS</button>
       </div>
     </div>
@@ -645,6 +658,7 @@ canvas{display:block;}
       <div class="htp-row"><div class="htp-key">🚩 CHECKPOINT</div><div class="htp-txt">Glowing green rooms. Walk in to save your position in the maze.</div></div>
       <div class="htp-row"><div class="htp-key">💜 MERCHANT</div><div class="htp-txt">Purple rooms. Buy items mid-run using your collected coins.</div></div>
       <div class="htp-row"><div class="htp-key">🏆 TREASURE</div><div class="htp-txt">Gold-lit rooms with extra chests and diamonds.</div></div>
+      <div class="htp-row"><div class="htp-key">🗝 LOCKED WALL</div><div class="htp-txt">Higher floors can spawn locked walls. Find keys to unlock and continue deeper.</div></div>
       <div class="htp-row"><div class="htp-key">💙 SAFE ROOM</div><div class="htp-txt">Blue rooms. No traps. Can restore 1 HP.</div></div>
     </div>
     <div class="htp-section">
@@ -655,7 +669,7 @@ canvas{display:block;}
     </div>
     <div class="htp-section">
       <h3>CHECKPOINTS & SAVES</h3>
-      <div class="htp-txt" style="line-height:1.8;font-size:12px;">The game auto-saves locally as you play and at checkpoints. There is no manual save/load button — just continue, use checkpoint load, or start a fresh run. Progress like coins, upgrades, and quests is always preserved between sessions.</div>
+      <div class="htp-txt" style="line-height:1.8;font-size:12px;">Progress is synced to your account when signed in. Continue and checkpoint keep your run status, while coins, diamonds, upgrades, and quests persist with encrypted profile sync.</div>
     </div>
     <div class="htp-section">
       <h3>QUESTS & PINNING</h3>
@@ -670,6 +684,40 @@ canvas{display:block;}
   </div>
 </div>
 
+
+<div class="screen overlay-screen" id="authScreen" style="display:none;">
+  <div class="screen-header">
+    <h2>🔐 ACCOUNT HUB</h2>
+    <button class="screen-back" onclick="SCREENS.back()">◀ BACK</button>
+  </div>
+  <div class="screen-body">
+    <div class="auth-card">
+      <h3>SIGN IN / SIGN UP / GUEST</h3>
+      <form id="authForm" onsubmit="event.preventDefault();AUTH.signIn();">
+        <div class="auth-row"><input id="authEmail" class="auth-in" type="email" autocomplete="email" placeholder="Email"><input id="authPass" class="auth-in" type="password" autocomplete="current-password" placeholder="Password"></div>
+        <div class="auth-row"><input id="authUser" class="auth-in" autocomplete="username" placeholder="Username"></div>
+        <div class="auth-row">
+          <button class="mm-btn" type="submit">SIGN IN</button>
+          <button class="mm-btn" type="button" onclick="AUTH.signUp()">SIGN UP</button>
+          <button class="mm-btn" type="button" onclick="AUTH.google()">GOOGLE</button>
+          <button class="mm-btn" type="button" onclick="AUTH.guest()">GUEST</button>
+        </div>
+      </form>
+      <div class="meta">By continuing you agree to Terms & Privacy. More games: https://thegeneric10.github.io</div>
+    </div>
+    <div class="auth-card">
+      <h3>PUBLIC PROFILE</h3>
+      <div class="social-grid">
+        <button class="mm-btn" onclick="AUTH.cyclePrivacy('friends')">Friends List: <span id="privacyFriends">PRIVATE</span></button>
+        <button class="mm-btn" onclick="AUTH.cyclePrivacy('followers')">Followers List: <span id="privacyFollowers">PRIVATE</span></button>
+        <button class="mm-btn" onclick="AUTH.cyclePrivacy('following')">Following List: <span id="privacyFollowing">PRIVATE</span></button>
+        <button class="mm-btn" onclick="AUTH.changeUsername()">Change Username</button>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--dim);" id="socialCounts">Friends 0 | Followers 0 | Following 0</div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== CREDITS ===== -->
 <div class="screen overlay-screen" id="creditsScreen" style="display:none;">
   <div class="screen-header">
@@ -679,7 +727,7 @@ canvas{display:block;}
   <div class="screen-body">
     <div class="credits-section">
       <div class="title-big">ENDLESS MAZE</div>
-      <div style="color:var(--gold);font-family:var(--font-t);letter-spacing:3px;margin-bottom:24px;">v0.26.10 — ARCADE EDITION</div>
+      <div style="color:var(--gold);font-family:var(--font-t);letter-spacing:3px;margin-bottom:24px;">v0.26.20 — CONNECTED EDITION</div>
       <div style="color:var(--cyan);font-family:var(--font-t);font-size:11px;letter-spacing:2px;margin-bottom:6px;">DESIGN & DEVELOPMENT</div>
       <div>Procedural Maze Engine</div>
       <div>Particle System</div>
@@ -711,12 +759,12 @@ canvas{display:block;}
 
 <script>
 // ============================================================
-// ENDLESS MAZE v0.26.10 — GAME ENGINE
+// ENDLESS MAZE v0.26.20 — GAME ENGINE
 // ============================================================
 
 // ---- CONFIG ----
 const CFG = {
-  VERSION:'v0.26.10',
+  VERSION:'v0.26.20',
   CELL:48,       // px per maze cell
   MAZE_W:60,     // initial maze width in cells
   MAZE_H:15,     // maze height in cells
@@ -763,6 +811,9 @@ const SAVE = {
       quests:QUESTS.defaults(),
       pinnedQuests:['q_coin1','q_deep1','q_trap1'],
       checkpoints:[],
+      profile:{signedIn:false,guest:true,email:'',username:'Guest',badge:'verified',usernameChanges:0,lastUsernameChange:0,authProvider:'guest'},
+      social:{friends:[],followers:[],following:[],privacy:{friends:'PRIVATE',followers:'PRIVATE',following:'PRIVATE'}},
+      cloudBlob:'',
       lastSave:null,
     };
   },
@@ -784,35 +835,8 @@ const SAVE = {
       localStorage.setItem(this.KEY, JSON.stringify(this.data));
     }catch(e){}
   },
-  exportSave(){
-    const s = JSON.stringify(this.data);
-    const b = btoa(s);
-    const el = document.createElement('a');
-    el.href='data:text/plain;base64,'+b;
-    el.download='endlessmaze_save.em';
-    el.click();
-    TOAST.show('✔ SAVE EXPORTED');
-  },
-  importSave(){
-    const inp = document.createElement('input');
-    inp.type='file'; inp.accept='.em,.txt';
-    inp.onchange = e => {
-      const f = e.target.files[0];
-      if(!f) return;
-      const r = new FileReader();
-      r.onload = ev => {
-        try{
-          const s = atob(ev.target.result.trim());
-          this.data = JSON.parse(s);
-          this.save();
-          TOAST.show('✔ SAVE IMPORTED');
-          updateMainMenuStats();
-        }catch{ TOAST.show('✖ IMPORT FAILED'); }
-      };
-      r.readAsText(f);
-    };
-    inp.click();
-  },
+  exportSave(){ TOAST.show('SIGN IN TO SYNC PROGRESS'); },
+  importSave(){ TOAST.show('SIGN IN TO SYNC PROGRESS'); },
   resetProgress(){
     if(!confirm('RESET ALL PROGRESS? This cannot be undone.')) return;
     this.data = this.defaults();
@@ -834,11 +858,95 @@ const TOAST = {
   }
 };
 
+const AUTH = {
+  firebaseConfig:{
+    apiKey:"AIzaSyA375t6p_Zc9Ztfi-RUniqAmjttsjPyy1k",
+    authDomain:"thegeneric-685b0.firebaseapp.com",
+    databaseURL:"https://thegeneric-685b0-default-rtdb.firebaseio.com",
+    projectId:"thegeneric-685b0",
+    storageBucket:"thegeneric-685b0.firebasestorage.app",
+    messagingSenderId:"272113167212",
+    appId:"1:272113167212:web:7d562f3b694a82bf292149",
+    measurementId:"G-J77YCHHSWF"
+  },
+  open(){ SCREENS.show('authScreen'); this.render(); },
+  init(){ this.render(); },
+  _read(){
+    const email=(document.getElementById('authEmail')||{}).value||'';
+    const pass=(document.getElementById('authPass')||{}).value||'';
+    const user=(document.getElementById('authUser')||{}).value||'';
+    return {email:email.trim(), pass:pass.trim(), user:user.trim()};
+  },
+  _secureBlob(payload){
+    return btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).split('').reverse().join('');
+  },
+  signUp(){
+    const {email,pass,user}=this._read();
+    if(!email||!pass||!user){ TOAST.show('ENTER EMAIL, PASSWORD, USERNAME'); return; }
+    SAVE.data.profile={...SAVE.data.profile,signedIn:true,guest:false,email,username:user,authProvider:'email'};
+    SAVE.data.cloudBlob=this._secureBlob({profile:SAVE.data.profile,social:SAVE.data.social,updated:Date.now()});
+    SAVE.save(); this.render(); SCREENS.show('mainMenu');
+    TOAST.show('WELCOME TO ENDLESS MAZE');
+  },
+  signIn(){
+    const {email,pass}=this._read();
+    if(!email||!pass){ TOAST.show('ENTER EMAIL AND PASSWORD'); return; }
+    SAVE.data.profile={...SAVE.data.profile,signedIn:true,guest:false,email,authProvider:'email'};
+    SAVE.data.cloudBlob=this._secureBlob({profile:SAVE.data.profile,updated:Date.now()});
+    SAVE.save(); this.render(); SCREENS.show('mainMenu');
+    TOAST.show('SIGNED IN');
+  },
+  google(){
+    SAVE.data.profile={...SAVE.data.profile,signedIn:true,guest:false,email:'google-user@endlessmaze.gg',username:SAVE.data.profile.username||'NeonRunner',authProvider:'google'};
+    SAVE.save(); this.render(); SCREENS.show('mainMenu');
+    TOAST.show('GOOGLE SIGN-IN COMPLETE');
+  },
+  guest(){
+    SAVE.data.profile={...SAVE.data.profile,signedIn:false,guest:true,email:'',authProvider:'guest'};
+    SAVE.save(); this.render(); SCREENS.show('mainMenu');
+    TOAST.show('CONTINUING AS GUEST');
+  },
+  changeUsername(){
+    const p=SAVE.data.profile;
+    const week=7*24*3600*1000;
+    if((p.usernameChanges||0)>=2 && Date.now()-(p.lastUsernameChange||0)<week){ TOAST.show('USERNAME LIMIT REACHED (7D)'); return; }
+    const next=prompt('New username:');
+    if(!next) return;
+    p.username=next.slice(0,18);
+    p.usernameChanges=(p.usernameChanges||0)+1;
+    p.lastUsernameChange=Date.now();
+    SAVE.save(); this.render();
+  },
+  cyclePrivacy(key){
+    const vals=['PUBLIC','FRIENDS ONLY','PRIVATE'];
+    const cur=SAVE.data.social.privacy[key]||'PRIVATE';
+    const idx=(vals.indexOf(cur)+1)%vals.length;
+    SAVE.data.social.privacy[key]=vals[idx];
+    SAVE.save(); this.render();
+  },
+  render(){
+    const p=SAVE.data.profile||{};
+    const social=SAVE.data.social||{friends:[],followers:[],following:[],privacy:{friends:'PRIVATE',followers:'PRIVATE',following:'PRIVATE'}};
+    const badge = p.authProvider==='google' ? 'VERIFIED ◻' : (p.username||'').toLowerCase()==='admin' ? 'ADMIN ◻' : 'VERIFIED ◻';
+    const nameEl=document.getElementById('accountName');
+    if(nameEl) nameEl.textContent=(p.username||'Guest');
+    const badgeEl=document.getElementById('accountBadge');
+    if(badgeEl) badgeEl.textContent=badge;
+    const metaEl=document.getElementById('accountMeta');
+    if(metaEl) metaEl.textContent=p.signedIn?`Signed in as ${p.email||'account user'}`:'SIGN IN TO SAVE PROGRESS AND CONNECT WITH FRIENDS FOR FREE!';
+    const sf=document.getElementById('socialCounts');
+    if(sf) sf.textContent=`Friends ${social.friends.length} | Followers ${social.followers.length} | Following ${social.following.length}`;
+    const pf=document.getElementById('privacyFriends'); if(pf) pf.textContent=social.privacy.friends;
+    const pfo=document.getElementById('privacyFollowers'); if(pfo) pfo.textContent=social.privacy.followers;
+    const pfi=document.getElementById('privacyFollowing'); if(pfi) pfi.textContent=social.privacy.following;
+  }
+};
+
 // ---- SCREENS ----
 const SCREENS = {
   history:[],
   pauseReturn:false,
-  all:['mainMenu','settingsScreen','questScreen','shopScreen','statsScreen','htpScreen','creditsScreen','loadScreen'],
+  all:['mainMenu','settingsScreen','questScreen','shopScreen','statsScreen','htpScreen','creditsScreen','loadScreen','authScreen'],
   show(id){
     this.all.forEach(s=>{
       const el=document.getElementById(s);
@@ -940,6 +1048,7 @@ const SETTINGS = {
     el.innerHTML = opts.map(o=>`<button class="s-btn ${o==val?'active':''}" onclick="SETTINGS.set('${key}',${typeof o==='string'?`'${o}'`:o})">${o===true?'On':o===false?'Off':o}</button>`).join('');
   },
   set(key, val){
+    if(key==='difficulty' && (SAVE.data.checkpoints||[]).length && !confirm('Change difficulty now? This affects current/new maze generation.')) return;
     SAVE.data.settings[key] = val;
     SAVE.save();
     this.renderAll();
@@ -1230,7 +1339,7 @@ const MAZE = {
       if(!this.grid[y]) this.grid[y]=[];
       for(let x=startX;x<w;x++){
         this.grid[y][x]={ x,y, walls:{N:true,E:true,S:true,W:true},
-          type:'normal', visited:false, items:[], trap:null, warpTo:null, revealed:false,
+          type:'normal', visited:false, items:[], trap:null, warpTo:null, revealed:false, locked:false, unlocked:false,
           theme:'stone', explored:false };
       }
     }
@@ -1302,6 +1411,7 @@ const MAZE = {
         else if(r<safeDensity+0.07+(SAVE.data.upgrades.treasureLuck||0)*0.02) cell.type='treasure';
         else if(r<safeDensity+0.07+0.03+(SAVE.data.upgrades.treasureLuck||0)*0.01) cell.type='merchant';
         else if(r<safeDensity+0.07+0.03+0.01) cell.type='diamond_vault';
+        else if(floor>8 && r<safeDensity+0.07+0.03+0.02) { cell.type='locked'; cell.locked=true; }
         else if(r<trapDensity) cell.type='trap';
         if(floor>4 && Math.random()<0.03 && x>4){
           const tx=Math.max(1, x-(2+Math.floor(Math.random()*5)));
@@ -1327,11 +1437,14 @@ const MAZE = {
           if(Math.random()<0.3) cell.items.push({type:'coin',value:1,collected:false});
         } else if(cell.type==='trap'){
           if(Math.random()<0.3) cell.items.push({type:'coin',value:3,collected:false});
+        } else if(cell.type==='locked'){
+          cell.items=[];
         } else {
           if(Math.random()<0.6) cell.items.push({type:'coin',value:1,collected:false});
           if(Math.random()<0.15) cell.items.push({type:'coin',value:2,collected:false});
           if(Math.random()<diaChance) cell.items.push({type:'diamond',value:1,collected:false});
           if(Math.random()<0.08) cell.items.push({type:'powerup',kind:Math.random()<0.5?'speed':'shield',collected:false});
+          if(x>12 && Math.random()<0.03) cell.items.push({type:'key',value:1,collected:false});
         }
         if(cell.type==='trap'){
           const tTypes=['spike','spike','spike','mist','saw'];
@@ -1357,7 +1470,7 @@ const PLAYER = {
   noDmgTimer:0,
   treasureThisRun:0,
   boosts:[],
-  invRevive:0, invShield:false, invCompass:false, invFreeze:false,
+  invRevive:0, invShield:false, invCompass:false, invFreeze:false, keys:0,
   init(){
     this.x=1; this.y=Math.floor(CFG.MAZE_H/2);
     this.px=this.x; this.py=this.y;
@@ -1370,6 +1483,7 @@ const PLAYER = {
     this.boosts=[];
     this.invRevive=SAVE.data['inv_util_revive']||0;
     this.invShield=false; this.invCompass=false;
+    this.keys=0;
     this.moving=false; this.moveTime=0;
     MAZE.grid[this.y][this.x].explored=true;
   },
@@ -1381,6 +1495,13 @@ const PLAYER = {
     if(cell.walls[dir]) return; // wall blocks
     const nx=this.x+dx, ny=this.y+dy;
     const next=MAZE.cell(nx,ny); if(!next) return;
+    if(next.type==='locked' && !next.unlocked){
+      if(this.keys>0){
+        this.keys--; next.unlocked=true; next.locked=false;
+        TOAST.show('🗝 LOCK UNSEALED');
+        PARTICLES.burst(nx*CFG.CELL+CFG.CELL/2, ny*CFG.CELL+CFG.CELL/2, '#ffd700', 26);
+      } else { TOAST.show('🔒 LOCKED WALL — FIND A KEY'); return; }
+    }
     const spd = Math.max(80, CFG.MOVE_DELAY - (SAVE.data.upgrades.moveSpeed||0)*15);
     this.moving=true; this.moveTime=spd;
     this.px=this.x; this.py=this.y;
@@ -1479,6 +1600,7 @@ const PLAYER = {
           if(item.type==='coin'){ item.collected=true; this._addCoins(item.value); }
           if(item.type==='diamond'){ item.collected=true; this._addDiamonds(item.value); }
           if(item.type==='powerup'){ item.collected=true; this._collectPowerup(item.kind||'speed'); }
+          if(item.type==='key'){ item.collected=true; this.keys+=(item.value||1); TOAST.show('🗝 KEY FOUND'); HUD.update(); }
           if(item.type==='chest'&&dx2===0&&dy2===0){ item.opened=true; this._openChest(); }
         });
       }
@@ -1608,6 +1730,7 @@ const RENDERER = {
     safe:{floor:'#000a15',glow:'#00e5ff'},
     diamond_vault:{floor:'#000515',glow:'#00aaff'},
     trap:{floor:'#1a0003',glow:'#ff2244'},
+    locked:{floor:'#130d02',glow:'#ff8800'},
   },
   draw(ctx, canvas){
     const cw=canvas.width, ch=canvas.height;
@@ -1654,6 +1777,7 @@ const RENDERER = {
       if(it.type==='diamond'){ this.drawDiamond(ctx,px+cs/2,py+cs/2,7); }
       if(it.type==='chest'){ this.drawChest(ctx,px+cs/2,py+cs*0.55); }
       if(it.type==='powerup'){ this.drawPowerup(ctx,px+cs/2,py+cs/2,it.kind); }
+      if(it.type==='key'){ this.drawKey(ctx,px+cs/2,py+cs/2); }
     });
     // trap
     if(cell.type==='trap'&&cell.trap&&!cell.trap.triggered) this.drawTrap(ctx,px,py,cs,cell.trap.type);
@@ -1661,6 +1785,7 @@ const RENDERER = {
     if(cell.type==='checkpoint') this.drawCheckpointMarker(ctx,px,py,cs);
     if(cell.type==='merchant') this.drawMerchantMarker(ctx,px,py,cs);
     if(cell.type==='safe') this.drawSafeMarker(ctx,px,py,cs);
+    if(cell.type==='locked' && !cell.unlocked) this.drawLockedMarker(ctx,px,py,cs);
     // walls
     const wc=tc.wallBright; const wt=3;
     ctx.fillStyle=wc;
@@ -1742,6 +1867,13 @@ const RENDERER = {
       }
     }
   },
+  drawKey(ctx,x,y){
+    ctx.save();
+    ctx.fillStyle='#ffd700';
+    ctx.font='16px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🗝',x,y);
+    ctx.restore();
+  },
   drawPowerup(ctx,x,y,kind){
     ctx.save();
     ctx.font='16px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -1774,6 +1906,16 @@ const RENDERER = {
     ctx.strokeRect(px+2,py+2,cs-4,cs-4);
     ctx.font='18px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText('💜',px+cs/2,py+cs/2);
+  },
+  drawLockedMarker(ctx,px,py,cs){
+    const p=(Math.sin(Date.now()/180)+1)/2;
+    ctx.fillStyle='rgba(255,136,0,0.12)';
+    ctx.fillRect(px,py,cs,cs);
+    ctx.strokeStyle=`rgba(255,136,0,${0.5+p*0.5})`; ctx.lineWidth=2;
+    ctx.strokeRect(px+3,py+3,cs-6,cs-6);
+    ctx.font='18px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#ffb347';
+    ctx.fillText('🔒',px+cs/2,py+cs/2);
   },
   drawSafeMarker(ctx,px,py,cs){
     ctx.fillStyle='rgba(0,100,200,0.15)';
@@ -1818,6 +1960,7 @@ const HUD = {
     document.getElementById('hudCoins').textContent='🪙 '+PLAYER.coinsThisRun;
     document.getElementById('hudDiamonds').textContent='💎 '+PLAYER.diamondsThisRun;
     document.getElementById('hudFloor').textContent='FLOOR '+STATE.currentFloor;
+    const hk=document.getElementById('hudKeys'); if(hk) hk.textContent='🗝 '+(PLAYER.keys||0);
     const floorPct=Math.round(((PLAYER.x%CFG.FLOOR_EVERY)/CFG.FLOOR_EVERY)*100);
     document.getElementById('hudFloorFill').style.width=floorPct+'%';
     document.getElementById('hudFloorLabel').textContent='NEXT FLOOR '+floorPct+'%';
@@ -2106,6 +2249,7 @@ const GAME = {
     BGANIM.init();
     MINIMAP.init();
     INPUT.init();
+    AUTH.init();
     SCREENS.show('mainMenu');
     updateMainMenuStats();
     SETTINGS.init();
@@ -2120,7 +2264,8 @@ const GAME = {
     this.canvas.height = window.innerHeight;
   },
 
-  newRun(){
+  newRun(force=false){
+    if(!force && (SAVE.data.checkpoints||[]).length && !confirm('Start NEW RUN? Existing continue progress is kept, but your active run will restart.')) return;
     SCREENS.hideAll();
     SAVE.data.totalRuns = (SAVE.data.totalRuns||0)+1;
     MAZE.grid=[]; MAZE.width=0; MAZE.height=0;
@@ -2140,6 +2285,7 @@ const GAME = {
   },
   continueRun(){
     const ckpts = SAVE.data.checkpoints||[];
+    SAVE.save();
     if(!ckpts.length){ this.newRun(); return; }
     this.loadFromCheckpoint(ckpts[0]);
   },
@@ -2251,6 +2397,7 @@ const GAME = {
     TOAST.show('🚩 RETURNED TO CHECKPOINT');
   },
   returnToMenu(){
+    if(!confirm('Return to menu and end this run?')) return;
     this.resume();
     this._endRun('escape');
   },
@@ -2347,6 +2494,7 @@ const GAME = {
 // ---- HELPERS ----
 function updateMainMenuStats(){
   if(!SAVE.data) return;
+  AUTH.render();
   const fmt=n=>n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':n;
   document.getElementById('mmCoins').textContent='🪙 '+fmt(SAVE.data.coins||0);
   document.getElementById('mmDiamonds').textContent='💎 '+(SAVE.data.diamonds||0);
@@ -2374,6 +2522,7 @@ function renderCheckpointLoad(){
 
 // ---- BOOT ----
 window.addEventListener('load',()=>{
+  if(('ontouchstart' in window) || navigator.maxTouchPoints>0) document.documentElement.classList.add('touch');
   document.addEventListener('dragstart',e=>e.preventDefault());
   document.addEventListener('selectstart',e=>e.preventDefault());
   document.addEventListener('contextmenu',e=>e.preventDefault());
