@@ -1,0 +1,2324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ENDLESS MAZE v0.26.1</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-user-select:none;-moz-user-select:none;user-select:none;-webkit-user-drag:none;}
+img,canvas,svg{-webkit-user-drag:none;user-drag:none;}
+:root{
+  --bg:#05050a;--bg2:#080812;--panel:#0c0c1e;--panel2:#101028;
+  --border:#1e1e40;--border2:#282850;
+  --cyan:#00e5ff;--cyan2:#00b3cc;--cyan3:#007a8c;
+  --gold:#ffd700;--gold2:#cc9900;--gold3:#8a6500;
+  --purple:#9900ff;--purple2:#7700cc;
+  --green:#00ff88;--green2:#00cc6a;
+  --red:#ff2244;--red2:#cc1133;
+  --orange:#ff8800;--orange2:#cc6600;
+  --white:#d0d8ff;--dim:#3a3a5a;--dim2:#252540;
+  --font-t:'Orbitron',monospace;--font-m:'Share Tech Mono',monospace;
+  --glow-c:0 0 8px #00e5ff,0 0 20px rgba(0,229,255,0.4);
+  --glow-g:0 0 8px #ffd700,0 0 20px rgba(255,215,0,0.4);
+  --glow-p:0 0 8px #9900ff,0 0 20px rgba(153,0,255,0.4);
+  --glow-r:0 0 8px #ff2244,0 0 20px rgba(255,34,68,0.4);
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--white);font-family:var(--font-m);}
+canvas{display:block;}
+
+/* SCREEN SYSTEM */
+.screen{position:fixed;inset:0;display:none;z-index:10;}
+.screen.active{display:flex;}
+#gameScreen{display:none;position:fixed;inset:0;}
+#gameScreen.active{display:block;}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--panel);}
+::-webkit-scrollbar-thumb{background:var(--cyan3);border-radius:2px;}
+
+/* CANVAS BG */
+#bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+#gameCanvas{position:fixed;inset:0;z-index:1;}
+
+/* MAIN MENU */
+#mainMenu{flex-direction:column;align-items:center;justify-content:center;z-index:20;}
+.mm-container{display:flex;flex-direction:column;align-items:center;gap:8px;max-width:480px;width:90%;}
+.mm-logo{text-align:center;margin-bottom:16px;animation:logoPulse 2s ease-in-out infinite;}
+.mm-logo h1{font-family:var(--font-t);font-size:clamp(28px,6vw,52px);font-weight:900;
+  color:var(--cyan);text-shadow:var(--glow-c);letter-spacing:4px;line-height:1.1;}
+.mm-logo .sub{font-family:var(--font-t);font-size:clamp(10px,2vw,13px);color:var(--gold);
+  text-shadow:var(--glow-g);letter-spacing:8px;margin-top:4px;}
+.mm-logo .ver{font-size:10px;color:var(--dim);letter-spacing:3px;margin-top:2px;}
+@keyframes logoPulse{0%,100%{text-shadow:var(--glow-c);}50%{text-shadow:0 0 15px #00e5ff,0 0 40px rgba(0,229,255,0.7),0 0 80px rgba(0,229,255,0.3);}}
+
+.mm-stats-row{display:flex;gap:8px;margin-bottom:8px;width:100%;}
+.mm-stat{flex:1;background:var(--panel);border:1px solid var(--border2);padding:8px 10px;
+  border-radius:4px;text-align:center;}
+.mm-stat .label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;}
+.mm-stat .val{font-family:var(--font-t);font-size:14px;color:var(--cyan);margin-top:2px;}
+
+.mm-btn{width:100%;padding:12px 20px;background:var(--panel);border:1px solid var(--border2);
+  border-radius:4px;font-family:var(--font-t);font-size:12px;font-weight:600;color:var(--white);
+  cursor:pointer;text-align:left;letter-spacing:2px;text-transform:uppercase;
+  transition:all 0.15s ease;position:relative;overflow:hidden;}
+.mm-btn:hover{background:var(--panel2);border-color:var(--cyan);color:var(--cyan);
+  text-shadow:var(--glow-c);box-shadow:0 0 12px rgba(0,229,255,0.2);}
+.mm-btn:hover::before{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(0,229,255,0.06),transparent);
+  animation:btnSweep 0.4s ease;}
+.mm-btn.primary{border-color:var(--cyan2);color:var(--cyan);}
+.mm-btn.primary:hover{background:rgba(0,229,255,0.1);}
+.mm-btn .icon{float:right;opacity:0.5;}
+@keyframes btnSweep{from{transform:translateX(-100%);}to{transform:translateX(100%);}}
+
+.mm-btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;}
+
+/* NOTIFICATION TOAST */
+#toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:1000;
+  background:var(--panel2);border:1px solid var(--cyan);color:var(--cyan);
+  font-family:var(--font-t);font-size:11px;letter-spacing:2px;padding:10px 20px;
+  border-radius:4px;text-align:center;pointer-events:none;opacity:0;
+  transition:opacity 0.3s ease;box-shadow:var(--glow-c);}
+#toast.show{opacity:1;}
+
+/* GENERIC SCREEN / OVERLAY */
+.overlay-screen{flex-direction:column;align-items:center;background:rgba(5,5,10,0.97);z-index:50;overflow-y:auto;}
+.screen-header{width:100%;max-width:700px;display:flex;align-items:center;gap:16px;
+  padding:20px 24px 0;margin-bottom:16px;}
+.screen-header h2{font-family:var(--font-t);font-size:clamp(16px,4vw,22px);font-weight:700;
+  color:var(--cyan);text-shadow:var(--glow-c);letter-spacing:3px;flex:1;}
+.screen-back{background:var(--panel);border:1px solid var(--border2);color:var(--dim);
+  font-family:var(--font-t);font-size:10px;letter-spacing:2px;padding:8px 14px;
+  border-radius:4px;cursor:pointer;transition:all 0.15s;}
+.screen-back:hover{border-color:var(--cyan);color:var(--cyan);}
+.screen-body{width:100%;max-width:700px;padding:0 24px 24px;flex:1;}
+
+/* SETTINGS */
+.settings-tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap;}
+.stab{background:var(--panel);border:1px solid var(--border);color:var(--dim);
+  font-family:var(--font-t);font-size:10px;letter-spacing:1px;padding:7px 12px;
+  border-radius:4px;cursor:pointer;transition:all 0.15s;}
+.stab:hover,.stab.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.08);}
+.stab-panel{display:none;}
+.stab-panel.active{display:block;}
+.setting-group{margin-bottom:20px;}
+.setting-group-title{font-family:var(--font-t);font-size:10px;color:var(--gold);
+  letter-spacing:2px;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;}
+.setting-row{display:flex;align-items:center;justify-content:space-between;
+  padding:8px 0;border-bottom:1px solid var(--dim2);}
+.setting-label{font-size:12px;color:var(--white);}
+.setting-desc{font-size:10px;color:var(--dim);margin-top:2px;}
+.setting-ctrl{display:flex;gap:4px;}
+.s-btn{background:var(--panel);border:1px solid var(--border);color:var(--dim);
+  font-family:var(--font-m);font-size:10px;padding:5px 10px;border-radius:3px;
+  cursor:pointer;transition:all 0.12s;}
+.s-btn:hover,.s-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.1);}
+.s-btn.on{border-color:var(--green);color:var(--green);}
+.s-btn.off{border-color:var(--red);color:var(--red);}
+.volume-slider{width:120px;height:4px;accent-color:var(--cyan);cursor:pointer;}
+.preset-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:6px;}
+.preset-btn{background:var(--panel);border:1px solid var(--border);color:var(--dim);
+  font-family:var(--font-t);font-size:9px;letter-spacing:1px;padding:6px 4px;
+  border-radius:3px;cursor:pointer;text-align:center;transition:all 0.12s;}
+.preset-btn:hover,.preset-btn.active{border-color:var(--gold);color:var(--gold);}
+.save-info{background:var(--panel);border:1px solid var(--border2);border-radius:4px;padding:12px;margin-bottom:12px;}
+.save-info div{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;}
+.save-info .k{color:var(--dim);}
+.save-info .v{color:var(--cyan);}
+
+/* QUESTS */
+.quest-pinned-header{font-family:var(--font-t);font-size:11px;color:var(--gold);
+  letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.quest-pinned-header::after{content:'';flex:1;height:1px;background:var(--gold3);}
+.quest-card{background:var(--panel);border:1px solid var(--border2);border-radius:4px;
+  padding:12px 14px;margin-bottom:8px;position:relative;cursor:pointer;transition:all 0.15s;}
+.quest-card:hover{border-color:var(--cyan);background:var(--panel2);}
+.quest-card.pinned{border-color:var(--gold3);}
+.quest-card.pinned:hover{border-color:var(--gold);}
+.quest-card.done{border-color:var(--green2);opacity:0.7;}
+.quest-title{font-family:var(--font-t);font-size:11px;color:var(--white);letter-spacing:1px;margin-bottom:4px;}
+.quest-desc{font-size:11px;color:var(--dim);margin-bottom:8px;}
+.quest-bar-wrap{background:var(--dim2);border-radius:2px;height:4px;margin-bottom:6px;}
+.quest-bar{height:4px;border-radius:2px;background:var(--cyan);transition:width 0.5s ease;}
+.quest-bar.done{background:var(--green);}
+.quest-progress-txt{font-size:10px;color:var(--dim);}
+.quest-reward{font-size:10px;color:var(--gold);float:right;}
+.quest-diff{font-size:9px;letter-spacing:1px;padding:2px 6px;border-radius:2px;margin-left:6px;}
+.quest-diff.easy{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid var(--green2);}
+.quest-diff.med{background:rgba(255,136,0,0.1);color:var(--orange);border:1px solid var(--orange2);}
+.quest-diff.hard{background:rgba(255,34,68,0.1);color:var(--red);border:1px solid var(--red2);}
+.quest-pin-btn{position:absolute;top:10px;right:10px;background:none;border:1px solid var(--border);
+  color:var(--dim);font-size:9px;letter-spacing:1px;padding:3px 7px;border-radius:3px;cursor:pointer;
+  font-family:var(--font-m);transition:all 0.12s;}
+.quest-pin-btn:hover{border-color:var(--gold);color:var(--gold);}
+.quest-pin-btn.pinned-active{border-color:var(--gold);color:var(--gold);}
+
+/* SHOP */
+.shop-tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap;}
+.shop-bal{background:var(--panel);border:1px solid var(--border2);padding:8px 16px;
+  border-radius:4px;display:flex;gap:20px;margin-bottom:14px;}
+.bal-item{display:flex;align-items:center;gap:6px;font-family:var(--font-t);font-size:14px;}
+.bal-item.coins{color:var(--gold);}
+.bal-item.diamonds{color:var(--cyan);}
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;}
+.shop-item{background:var(--panel);border:1px solid var(--border2);border-radius:4px;
+  padding:14px;cursor:pointer;transition:all 0.15s;position:relative;}
+.shop-item:hover{border-color:var(--cyan);background:var(--panel2);}
+.shop-item.owned{border-color:var(--green2);opacity:0.6;}
+.shop-item.owned::after{content:'OWNED';position:absolute;top:8px;right:8px;
+  font-size:9px;color:var(--green);letter-spacing:1px;}
+.shop-item-icon{font-size:24px;margin-bottom:8px;}
+.shop-item-name{font-family:var(--font-t);font-size:11px;color:var(--white);letter-spacing:1px;margin-bottom:4px;}
+.shop-item-desc{font-size:10px;color:var(--dim);margin-bottom:10px;line-height:1.4;}
+.shop-price{font-family:var(--font-t);font-size:12px;}
+.shop-price.coins{color:var(--gold);}
+.shop-price.diamonds{color:var(--cyan);}
+.shop-buy-btn{width:100%;background:none;border:1px solid var(--border2);color:var(--dim);
+  font-family:var(--font-t);font-size:9px;letter-spacing:2px;padding:6px;border-radius:3px;
+  cursor:pointer;transition:all 0.12s;margin-top:8px;}
+.shop-buy-btn:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.08);}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+.stat-card{background:var(--panel);border:1px solid var(--border2);border-radius:4px;padding:12px;}
+.stat-card .s-label{font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;}
+.stat-card .s-val{font-family:var(--font-t);font-size:18px;color:var(--cyan);margin-top:4px;}
+.stat-card.gold-card .s-val{color:var(--gold);}
+.stat-card.purple-card .s-val{color:var(--purple);}
+.stat-card.green-card .s-val{color:var(--green);}
+
+/* HOW TO PLAY */
+.htp-section{background:var(--panel);border:1px solid var(--border2);border-radius:4px;
+  padding:16px;margin-bottom:10px;}
+.htp-section h3{font-family:var(--font-t);font-size:12px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;}
+.htp-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:8px;font-size:12px;}
+.htp-key{background:var(--panel2);border:1px solid var(--border2);color:var(--cyan);
+  font-family:var(--font-t);font-size:9px;padding:3px 7px;border-radius:3px;white-space:nowrap;min-width:60px;text-align:center;}
+.htp-txt{color:var(--dim);line-height:1.5;}
+
+/* CREDITS */
+.credits-section{text-align:center;padding:20px;font-size:12px;color:var(--dim);line-height:2.0;}
+.credits-section .title-big{font-family:var(--font-t);font-size:28px;color:var(--cyan);
+  text-shadow:var(--glow-c);margin-bottom:8px;}
+
+/* CHECKPOINT LOAD */
+.ckpt-option{background:var(--panel);border:1px solid var(--border2);border-radius:4px;
+  padding:14px 18px;margin-bottom:8px;cursor:pointer;transition:all 0.15s;display:flex;
+  align-items:center;gap:12px;}
+.ckpt-option:hover{border-color:var(--green);background:rgba(0,255,136,0.05);}
+.ckpt-option .icon{font-size:20px;}
+.ckpt-option .info .name{font-family:var(--font-t);font-size:12px;color:var(--white);letter-spacing:1px;}
+.ckpt-option .info .desc{font-size:10px;color:var(--dim);margin-top:2px;}
+
+/* PAUSE MENU */
+#pauseMenu{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
+  background:rgba(5,5,10,0.92);}
+#pauseMenu.active{display:flex;}
+.pause-container{display:flex;gap:16px;max-width:700px;width:95%;}
+.pause-left{flex:1;display:flex;flex-direction:column;gap:6px;}
+.pause-right{width:220px;background:var(--panel);border:1px solid var(--border2);border-radius:4px;
+  padding:14px;font-size:11px;}
+.pause-title{font-family:var(--font-t);font-size:20px;color:var(--cyan);text-shadow:var(--glow-c);
+  letter-spacing:4px;margin-bottom:12px;text-align:center;}
+.pause-btn{background:var(--panel);border:1px solid var(--border2);color:var(--white);
+  font-family:var(--font-t);font-size:11px;letter-spacing:2px;padding:12px 16px;
+  border-radius:4px;cursor:pointer;transition:all 0.15s;text-align:left;}
+.pause-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.pause-btn.danger:hover{border-color:var(--red);color:var(--red);}
+.pstat{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--dim2);}
+.pstat .k{color:var(--dim);}
+.pstat .v{color:var(--cyan);font-family:var(--font-t);}
+.pstat .v.gold{color:var(--gold);}
+
+/* RESULTS SCREEN */
+#resultsScreen{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;
+  background:rgba(5,5,10,0.97);}
+#resultsScreen.active{display:flex;flex-direction:column;}
+.results-container{max-width:600px;width:95%;padding:20px;}
+.results-title{font-family:var(--font-t);font-size:clamp(18px,4vw,28px);color:var(--cyan);
+  text-shadow:var(--glow-c);letter-spacing:4px;text-align:center;margin-bottom:4px;}
+.results-subtitle{text-align:center;color:var(--dim);font-size:11px;letter-spacing:3px;margin-bottom:20px;}
+.results-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+.r-stat{background:var(--panel);border:1px solid var(--border2);border-radius:4px;padding:12px;text-align:center;}
+.r-stat .r-val{font-family:var(--font-t);font-size:20px;color:var(--cyan);}
+.r-stat .r-val.gold{color:var(--gold);}
+.r-stat .r-val.purple{color:var(--purple);}
+.r-stat .r-label{font-size:9px;color:var(--dim);letter-spacing:1px;margin-top:4px;}
+.results-records{background:var(--panel);border:1px solid var(--gold3);border-radius:4px;
+  padding:12px;margin-bottom:12px;}
+.results-records .rec-title{font-family:var(--font-t);font-size:10px;color:var(--gold);
+  letter-spacing:2px;margin-bottom:8px;}
+.new-record{color:var(--gold);font-size:11px;padding:3px 0;display:flex;gap:8px;align-items:center;}
+.new-record::before{content:'★';}
+.results-save{text-align:center;font-size:10px;color:var(--green);letter-spacing:2px;margin-bottom:12px;}
+.results-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+.r-btn{background:var(--panel);border:1px solid var(--border2);color:var(--white);
+  font-family:var(--font-t);font-size:10px;letter-spacing:2px;padding:10px 16px;
+  border-radius:4px;cursor:pointer;transition:all 0.15s;}
+.r-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.r-btn.primary{border-color:var(--cyan);color:var(--cyan);}
+
+/* HUD */
+#hud{position:fixed;inset:0;z-index:100;pointer-events:none;display:none;}
+#hud.active{display:block;}
+.hud-tl{position:absolute;top:10px;left:10px;display:flex;flex-direction:column;gap:6px;}
+.hud-tr{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+.hud-bl{position:absolute;bottom:10px;left:10px;}
+.hud-br{position:absolute;bottom:10px;right:10px;display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+.hud-panel{background:rgba(5,5,10,0.8);border:1px solid var(--border2);border-radius:4px;padding:6px 10px;
+  font-family:var(--font-t);font-size:12px;backdrop-filter:blur(4px);}
+.hud-coins{color:var(--gold);}
+.hud-diamonds{color:var(--cyan);}
+.hud-floor{color:var(--purple);}
+.hud-timer{color:var(--white);}
+.hud-hp-bar{display:flex;gap:3px;align-items:center;}
+.hud-hp-pip{width:14px;height:14px;border-radius:2px;border:1px solid var(--red2);background:var(--red);}
+.hud-hp-pip.empty{background:var(--dim2);}
+.fps-display{font-size:10px;color:var(--dim);}
+#minimapCanvas{border:1px solid var(--border2);border-radius:3px;}
+.hud-quests{background:rgba(5,5,10,0.85);border:1px solid var(--gold3);border-radius:4px;
+  padding:8px 10px;max-width:200px;}
+.hud-quest-title{font-family:var(--font-t);font-size:9px;color:var(--gold);letter-spacing:1px;margin-bottom:6px;}
+.hud-quest-item{margin-bottom:6px;}
+.hud-quest-name{font-size:10px;color:var(--white);margin-bottom:2px;}
+.hud-quest-progress{height:3px;background:var(--dim2);border-radius:2px;}
+.hud-quest-fill{height:3px;border-radius:2px;background:var(--gold);transition:width 0.4s;}
+.hud-quest-txt{font-size:9px;color:var(--dim);margin-top:1px;}
+.hud-boost-list{display:flex;flex-direction:column;gap:3px;}
+.boost-chip{background:rgba(5,5,10,0.8);border:1px solid var(--purple2);color:var(--purple);
+  font-size:9px;padding:2px 7px;border-radius:3px;letter-spacing:1px;}
+
+/* MOBILE CONTROLS */
+#mobileControls{display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  z-index:150;pointer-events:all;}
+@media(max-width:700px){#mobileControls{display:grid;grid-template-columns:repeat(3,48px);
+  grid-template-rows:repeat(3,48px);gap:4px;}}
+.dpad-btn{background:rgba(5,5,10,0.8);border:1px solid var(--border2);border-radius:6px;
+  color:var(--cyan);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  active-bg:rgba(0,229,255,0.2);}
+.dpad-btn:active{background:rgba(0,229,255,0.15);}
+
+/* MERCHANT MODAL */
+#merchantModal{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;
+  background:rgba(5,5,10,0.95);}
+#merchantModal.active{display:flex;}
+.merchant-box{max-width:500px;width:95%;background:var(--panel);border:1px solid var(--purple2);
+  border-radius:6px;padding:20px;box-shadow:var(--glow-p);}
+.merchant-name{font-family:var(--font-t);font-size:16px;color:var(--purple);
+  text-shadow:var(--glow-p);letter-spacing:3px;margin-bottom:4px;}
+.merchant-desc{font-size:11px;color:var(--dim);margin-bottom:16px;}
+.merchant-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:14px;}
+.m-item{background:var(--panel2);border:1px solid var(--border2);border-radius:4px;
+  padding:10px;cursor:pointer;transition:all 0.15s;text-align:center;}
+.m-item:hover{border-color:var(--purple);background:rgba(153,0,255,0.08);}
+.m-item .mi-icon{font-size:22px;margin-bottom:4px;}
+.m-item .mi-name{font-family:var(--font-t);font-size:9px;color:var(--white);letter-spacing:1px;margin-bottom:3px;}
+.m-item .mi-desc{font-size:9px;color:var(--dim);margin-bottom:6px;}
+.m-item .mi-price{font-size:10px;}
+.merchant-close{width:100%;background:none;border:1px solid var(--dim);color:var(--dim);
+  font-family:var(--font-t);font-size:10px;letter-spacing:2px;padding:8px;border-radius:4px;cursor:pointer;}
+.merchant-close:hover{border-color:var(--red);color:var(--red);}
+
+/* PARTICLES OVERLAY */
+#particleCanvas{position:fixed;inset:0;z-index:5;pointer-events:none;}
+
+/* ANIMATIONS */
+@keyframes slideInLeft{from{opacity:0;transform:translateX(-30px);}to{opacity:1;transform:translateX(0);}}
+@keyframes slideInUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes glow-pulse{0%,100%{opacity:0.8;}50%{opacity:1;}}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}75%{transform:translateX(4px);}}
+@keyframes coinPop{0%{opacity:1;transform:translateY(0) scale(1);}100%{opacity:0;transform:translateY(-40px) scale(1.3);}}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.slide-in-left{animation:slideInLeft 0.3s ease forwards;}
+.slide-in-up{animation:slideInUp 0.3s ease forwards;}
+.fade-in{animation:fadeIn 0.4s ease forwards;}
+
+/* COIN POPUP */
+.coin-popup{position:fixed;pointer-events:none;font-family:var(--font-t);font-weight:700;
+  font-size:14px;color:var(--gold);text-shadow:var(--glow-g);z-index:500;
+  animation:coinPop 0.8s ease forwards;}
+
+/* DAMAGE FLASH */
+#damageFlash{position:fixed;inset:0;z-index:600;pointer-events:none;
+  background:rgba(255,34,68,0.25);opacity:0;transition:opacity 0.1s;}
+
+/* SCROLL FIX for overlay screens */
+.overlay-screen{overflow-y:auto;padding-bottom:24px;}
+</style>
+</head>
+<body>
+
+<!-- BG CANVAS (menu animation) -->
+<canvas id="bgCanvas"></canvas>
+<!-- PARTICLE CANVAS -->
+<canvas id="particleCanvas"></canvas>
+<!-- GAME CANVAS -->
+<canvas id="gameCanvas"></canvas>
+<!-- DAMAGE FLASH -->
+<div id="damageFlash"></div>
+
+<!-- TOAST NOTIFICATION -->
+<div id="toast"></div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-tl">
+    <div class="hud-panel hud-coins" id="hudCoins">🪙 0</div>
+    <div class="hud-panel hud-diamonds" id="hudDiamonds">💎 0</div>
+    <div class="hud-panel hud-floor" id="hudFloor">FLOOR 1</div>
+  </div>
+  <div class="hud-tr">
+    <div class="hud-panel hud-timer" id="hudTimer">00:00</div>
+    <div class="hud-hp-bar" id="hudHP"></div>
+    <div id="fpsdisplay" class="hud-panel fps-display" style="display:none;">0 FPS</div>
+  </div>
+  <div class="hud-bl">
+    <canvas id="minimapCanvas" width="120" height="80" style="display:none;"></canvas>
+  </div>
+  <div class="hud-br">
+    <div class="hud-quests" id="hudQuests"></div>
+    <div class="hud-boost-list" id="hudBoosts"></div>
+  </div>
+  <div id="mobileControls">
+    <div></div><div class="dpad-btn" id="dbUp">▲</div><div></div>
+    <div class="dpad-btn" id="dbLeft">◀</div><div class="dpad-btn" id="dbDown">▼</div><div class="dpad-btn" id="dbRight">▶</div>
+  </div>
+</div>
+
+<!-- PAUSE MENU -->
+<div id="pauseMenu">
+  <div class="pause-container">
+    <div class="pause-left">
+      <div class="pause-title">PAUSED</div>
+      <button class="pause-btn" onclick="GAME.resume()">▶  RESUME</button>
+      <button class="pause-btn" onclick="GAME.pauseOpenQuests()">📋  QUESTS</button>
+      <button class="pause-btn" onclick="GAME.pauseOpenInventory()">🎒  INVENTORY</button>
+      <button class="pause-btn" onclick="GAME.pauseOpenSettings()">⚙  SETTINGS</button>
+      <button class="pause-btn" onclick="GAME.saveNow()">💾  SAVE NOW</button>
+      <button class="pause-btn" onclick="GAME.returnToCheckpoint()">🚩  RETURN TO CHECKPOINT</button>
+      <button class="pause-btn danger" onclick="GAME.returnToMenu()">✖  RETURN TO MENU</button>
+    </div>
+    <div class="pause-right">
+      <div style="font-family:var(--font-t);font-size:10px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;">RUN INFO</div>
+      <div class="pstat"><span class="k">Time</span><span class="v" id="pstatTime">00:00</span></div>
+      <div class="pstat"><span class="k">Floor</span><span class="v" id="pstatFloor">1</span></div>
+      <div class="pstat"><span class="k">Coins</span><span class="v gold" id="pstatCoins">0</span></div>
+      <div class="pstat"><span class="k">Diamonds</span><span class="v" id="pstatDiamonds">0</span></div>
+      <div class="pstat"><span class="k">Rooms</span><span class="v" id="pstatRooms">0</span></div>
+      <div class="pstat"><span class="k">Traps Hit</span><span class="v" id="pstatTraps">0</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS SCREEN -->
+<div id="resultsScreen">
+  <div class="results-container">
+    <div class="results-title" id="resultsTitle">RUN COMPLETE</div>
+    <div class="results-subtitle" id="resultsSubtitle">— FLOOR REPORT —</div>
+    <div class="results-stats" id="resultsStats"></div>
+    <div class="results-records" id="resultsRecords" style="display:none;">
+      <div class="rec-title">★ NEW RECORDS ★</div>
+      <div id="resultsRecordsList"></div>
+    </div>
+    <div class="results-save" id="resultsSaveMsg">✔ PROGRESS SAVED</div>
+    <div class="results-btns">
+      <button class="r-btn primary" onclick="GAME.newRun()">▶ NEW RUN</button>
+      <button class="r-btn" onclick="GAME.continueFromCheckpoint()">🚩 CHECKPOINT</button>
+      <button class="r-btn" onclick="SCREENS.show('mainMenu')">⌂ MAIN MENU</button>
+      <button class="r-btn" onclick="SCREENS.show('shopScreen')">🛒 SHOP</button>
+    </div>
+  </div>
+</div>
+
+<!-- MERCHANT MODAL -->
+<div id="merchantModal">
+  <div class="merchant-box">
+    <div class="merchant-name" id="merchantName">WANDERER MERCHANT</div>
+    <div class="merchant-desc" id="merchantDesc">A mysterious figure offers rare goods...</div>
+    <div class="merchant-items" id="merchantItems"></div>
+    <button class="merchant-close" onclick="GAME.closeMerchant()">LEAVE SHOP</button>
+  </div>
+</div>
+
+<!-- ===== MAIN MENU ===== -->
+<div class="screen active" id="mainMenu">
+  <div class="mm-container fade-in">
+    <div class="mm-logo">
+      <h1>ENDLESS<br>MAZE</h1>
+      <div class="sub">EXPLORE · SURVIVE · ESCAPE</div>
+      <div class="ver">v0.26.1 — ARCADE EDITION</div>
+    </div>
+    <div class="mm-stats-row">
+      <div class="mm-stat"><div class="label">Coins</div><div class="val" id="mmCoins">0</div></div>
+      <div class="mm-stat"><div class="label">Diamonds</div><div class="val" id="mmDiamonds">0</div></div>
+      <div class="mm-stat"><div class="label">Best Floor</div><div class="val" id="mmFloor">—</div></div>
+      <div class="mm-stat"><div class="label">Total Runs</div><div class="val" id="mmRuns">0</div></div>
+    </div>
+    <button class="mm-btn primary" onclick="GAME.continueRun()">▶ CONTINUE <span class="icon">→</span></button>
+    <button class="mm-btn" onclick="GAME.newRun()">⚡ NEW RUN <span class="icon">→</span></button>
+    <button class="mm-btn" onclick="SCREENS.show('loadScreen')">🚩 LOAD CHECKPOINT <span class="icon">→</span></button>
+    <div class="mm-btn-grid">
+      <button class="mm-btn" onclick="SCREENS.show('shopScreen')">🛒 SHOP</button>
+      <button class="mm-btn" onclick="SCREENS.show('questScreen')">📋 QUESTS</button>
+      <button class="mm-btn" onclick="SCREENS.show('statsScreen')">📊 STATS</button>
+      <button class="mm-btn" onclick="SCREENS.show('settingsScreen')">⚙ SETTINGS</button>
+      <button class="mm-btn" onclick="SCREENS.show('htpScreen')">❓ HOW TO PLAY</button>
+      <button class="mm-btn" onclick="SCREENS.show('creditsScreen')">★ CREDITS</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SETTINGS SCREEN ===== -->
+<div class="screen overlay-screen" id="settingsScreen" style="display:none;">
+  <div class="screen-header">
+    <h2>⚙ SETTINGS</h2>
+    <button class="screen-back" onclick="SCREENS.back()">◀ BACK</button>
+  </div>
+  <div class="screen-body">
+    <div class="settings-tabs">
+      <button class="stab active" onclick="SETTINGS.tab('graphics')">GRAPHICS</button>
+      <button class="stab" onclick="SETTINGS.tab('performance')">PERFORMANCE</button>
+      <button class="stab" onclick="SETTINGS.tab('audio')">AUDIO</button>
+      <button class="stab" onclick="SETTINGS.tab('gameplay')">GAMEPLAY</button>
+      <button class="stab" onclick="SETTINGS.tab('interface')">INTERFACE</button>
+      <button class="stab" onclick="SETTINGS.tab('savedata')">SAVE DATA</button>
+    </div>
+
+    <!-- GRAPHICS -->
+    <div class="stab-panel active" id="stab-graphics">
+      <div class="setting-group">
+        <div class="setting-group-title">QUALITY PRESET</div>
+        <div class="preset-grid">
+          <button class="preset-btn" id="preset-Low" onclick="SETTINGS.setPreset('Low')">LOW</button>
+          <button class="preset-btn" id="preset-Medium" onclick="SETTINGS.setPreset('Medium')">MED</button>
+          <button class="preset-btn active" id="preset-High" onclick="SETTINGS.setPreset('High')">HIGH</button>
+          <button class="preset-btn" id="preset-Ultra" onclick="SETTINGS.setPreset('Ultra')">ULTRA</button>
+          <button class="preset-btn" id="preset-Auto" onclick="SETTINGS.setPreset('Auto')">AUTO</button>
+        </div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-group-title">GRAPHICS OPTIONS</div>
+        <div class="setting-row"><div><div class="setting-label">Shadows</div></div><div class="setting-ctrl" id="ctrl-shadows"></div></div>
+        <div class="setting-row"><div><div class="setting-label">Particles</div></div><div class="setting-ctrl" id="ctrl-particles"></div></div>
+        <div class="setting-row"><div><div class="setting-label">Glow Effects</div></div><div class="setting-ctrl" id="ctrl-glow"></div></div>
+        <div class="setting-row"><div><div class="setting-label">Animated Background</div></div><div class="setting-ctrl" id="ctrl-animBg"></div></div>
+        <div class="setting-row"><div><div class="setting-label">Maze Detail</div></div><div class="setting-ctrl" id="ctrl-mazeDetail"></div></div>
+        <div class="setting-row"><div><div class="setting-label">Screen Shake</div></div><div class="setting-ctrl" id="ctrl-screenShake"></div></div>
+        <div class="setting-row"><div><div class="setting-label">Lighting Effects</div></div><div class="setting-ctrl" id="ctrl-lighting"></div></div>
+      </div>
+    </div>
+
+    <!-- PERFORMANCE -->
+    <div class="stab-panel" id="stab-performance">
+      <div class="setting-group">
+        <div class="setting-group-title">PERFORMANCE OPTIONS</div>
+        <div class="setting-row"><div><div class="setting-label">FPS Limit</div></div><div class="setting-ctrl" id="ctrl-fpsLimit"></div></div>
+        <div class="setting-row"><div><div class="setting-label">FPS Counter</div></div><div class="setting-ctrl" id="ctrl-fpsCounter"></div></div>
+        <div class="setting-row"><div><div class="setting-label">Battery Saver Mode</div></div><div class="setting-ctrl" id="ctrl-batterySaver"></div></div>
+        <div class="setting-row"><div><div class="setting-label">Reduce Effects on Low FPS</div></div><div class="setting-ctrl" id="ctrl-reduceEffects"></div></div>
+      </div>
+    </div>
+
+    <!-- AUDIO -->
+    <div class="stab-panel" id="stab-audio">
+      <div class="setting-group">
+        <div class="setting-group-title">AUDIO SETTINGS</div>
+        <div class="setting-row"><div><div class="setting-label">Master Volume</div></div><div><input class="volume-slider" type="range" min="0" max="100" id="vol-master" oninput="SETTINGS.setVol('master',this.value)"></div></div>
+        <div class="setting-row"><div><div class="setting-label">Music Volume</div></div><div><input class="volume-slider" type="range" min="0" max="100" id="vol-music" oninput="SETTINGS.setVol('music',this.value)"></div></div>
+        <div class="setting-row"><div><div class="setting-label">SFX Volume</div></div><div><input class="volume-slider" type="range" min="0" max="100" id="vol-sfx" oninput="SETTINGS.setVol('sfx',this.value)"></div></div>
+        <div class="setting-row"><div><div class="setting-label">UI Sounds</div></div><div class="setting-ctrl" id="ctrl-uiSounds"></div></div>
+        <div class="setting-row"><div><div class="setting-label">Trap Warning Volume</div></div><div class="setting-ctrl" id="ctrl-trapVol"></div></div>
+      </div>
+    </div>
+
+    <!-- GAMEPLAY -->
+    <div class="stab-panel" id="stab-gameplay">
+      <div class="setting-group">
+        <div class="setting-group-title">GAMEPLAY OPTIONS</div>
+        <div class="setting-row"><div><div class="setting-label">Show Minimap</div></div><div class="setting-ctrl" id="ctrl-minimap"></div></div>
+        <div class="setting-row"><div><div class="setting-label">Auto Pause on Focus Loss</div></div><div class="setting-ctrl" id="ctrl-autoPause"></div></div>
+        <div class="setting-row"><div><div class="setting-label">Screen Flash Intensity</div></div><div class="setting-ctrl" id="ctrl-flashIntensity"></div></div>
+        <div class="setting-row"><div><div class="setting-label">Difficulty</div></div><div class="setting-ctrl" id="ctrl-difficulty"></div></div>
+      </div>
+    </div>
+
+    <!-- INTERFACE -->
+    <div class="stab-panel" id="stab-interface">
+      <div class="setting-group">
+        <div class="setting-group-title">HUD & INTERFACE</div>
+        <div class="setting-row"><div><div class="setting-label">Coin Popups</div></div><div class="setting-ctrl" id="ctrl-coinPopups"></div></div>
+        <div class="setting-row"><div><div class="setting-label">Quest Tracker on HUD</div></div><div class="setting-ctrl" id="ctrl-questHud"></div></div>
+        <div class="setting-row"><div><div class="setting-label">Damage Numbers</div></div><div class="setting-ctrl" id="ctrl-dmgNumbers"></div></div>
+        <div class="setting-row"><div><div class="setting-label">Timer Display</div></div><div class="setting-ctrl" id="ctrl-timerHud"></div></div>
+        <div class="setting-row"><div><div class="setting-label">High Contrast Mode</div></div><div class="setting-ctrl" id="ctrl-highContrast"></div></div>
+      </div>
+    </div>
+
+    <!-- SAVE DATA -->
+    <div class="stab-panel" id="stab-savedata">
+      <div class="save-info" id="saveInfo"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <button class="s-btn" onclick="SAVE.manualSave()">💾 MANUAL SAVE</button>
+        <button class="s-btn" onclick="SAVE.load()">📂 LOAD SAVE</button>
+        <button class="s-btn" onclick="SAVE.exportSave()">📤 EXPORT</button>
+        <button class="s-btn" onclick="SAVE.importSave()">📥 IMPORT</button>
+        <button class="s-btn" style="color:var(--red);border-color:var(--red2);" onclick="SAVE.resetProgress()">⚠ RESET PROGRESS</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== QUESTS SCREEN ===== -->
+<div class="screen overlay-screen" id="questScreen" style="display:none;">
+  <div class="screen-header">
+    <h2>📋 QUESTS</h2>
+    <button class="screen-back" onclick="SCREENS.back()">◀ BACK</button>
+  </div>
+  <div class="screen-body">
+    <div class="quest-pinned-header">⬛ PINNED QUESTS (3 MAX)</div>
+    <div id="pinnedQuestList"></div>
+    <div style="height:12px;"></div>
+    <div class="quest-pinned-header">ALL QUESTS</div>
+    <div id="allQuestList"></div>
+  </div>
+</div>
+
+<!-- ===== SHOP SCREEN ===== -->
+<div class="screen overlay-screen" id="shopScreen" style="display:none;">
+  <div class="screen-header">
+    <h2>🛒 SHOP</h2>
+    <button class="screen-back" onclick="SCREENS.back()">◀ BACK</button>
+  </div>
+  <div class="screen-body">
+    <div class="shop-bal">
+      <div class="bal-item coins">🪙 <span id="shopCoins">0</span></div>
+      <div class="bal-item diamonds">💎 <span id="shopDiamonds">0</span></div>
+    </div>
+    <div class="settings-tabs shop-tabs">
+      <button class="stab active" onclick="SHOP.tab('upgrades')">UPGRADES</button>
+      <button class="stab" onclick="SHOP.tab('utilities')">UTILITIES</button>
+      <button class="stab" onclick="SHOP.tab('cosmetics')">COSMETICS</button>
+      <button class="stab" onclick="SHOP.tab('rare')">RARE</button>
+    </div>
+    <div id="shopGrid" class="shop-grid"></div>
+  </div>
+</div>
+
+<!-- ===== STATS SCREEN ===== -->
+<div class="screen overlay-screen" id="statsScreen" style="display:none;">
+  <div class="screen-header">
+    <h2>📊 STATS</h2>
+    <button class="screen-back" onclick="SCREENS.back()">◀ BACK</button>
+  </div>
+  <div class="screen-body">
+    <div class="stats-grid" id="statsGrid"></div>
+  </div>
+</div>
+
+<!-- ===== HOW TO PLAY ===== -->
+<div class="screen overlay-screen" id="htpScreen" style="display:none;">
+  <div class="screen-header">
+    <h2>❓ HOW TO PLAY</h2>
+    <button class="screen-back" onclick="SCREENS.back()">◀ BACK</button>
+  </div>
+  <div class="screen-body">
+    <div class="htp-section">
+      <h3>MOVEMENT</h3>
+      <div class="htp-row"><div class="htp-key">W A S D</div><div class="htp-txt">Move through the maze. Each key press moves one cell.</div></div>
+      <div class="htp-row"><div class="htp-key">↑ ↓ ← →</div><div class="htp-txt">Arrow keys also move the player.</div></div>
+      <div class="htp-row"><div class="htp-key">ESC / P</div><div class="htp-txt">Pause the game and access run options.</div></div>
+    </div>
+    <div class="htp-section">
+      <h3>OBJECTIVES</h3>
+      <div class="htp-row"><div class="htp-key">🪙 COINS</div><div class="htp-txt">Walk over coins to collect them. Spend in the shop between runs.</div></div>
+      <div class="htp-row"><div class="htp-key">💎 DIAMONDS</div><div class="htp-txt">Rare currency found in vaults. Used for premium upgrades.</div></div>
+      <div class="htp-row"><div class="htp-key">🎁 CHESTS</div><div class="htp-txt">Walk over chests to open them. They contain random rewards.</div></div>
+      <div class="htp-row"><div class="htp-key">FLOOR</div><div class="htp-txt">Go deeper to reach higher floors. Each floor is harder and more rewarding.</div></div>
+    </div>
+    <div class="htp-section">
+      <h3>SPECIAL ROOMS</h3>
+      <div class="htp-row"><div class="htp-key">🚩 CHECKPOINT</div><div class="htp-txt">Glowing green rooms. Walk in to save your position in the maze.</div></div>
+      <div class="htp-row"><div class="htp-key">💜 MERCHANT</div><div class="htp-txt">Purple rooms. Buy items mid-run using your collected coins.</div></div>
+      <div class="htp-row"><div class="htp-key">🏆 TREASURE</div><div class="htp-txt">Gold-lit rooms with extra chests and diamonds.</div></div>
+      <div class="htp-row"><div class="htp-key">💙 SAFE ROOM</div><div class="htp-txt">Blue rooms. No traps. Can restore 1 HP.</div></div>
+    </div>
+    <div class="htp-section">
+      <h3>TRAPS & HAZARDS</h3>
+      <div class="htp-row"><div class="htp-key">⚠ SPIKE</div><div class="htp-txt">Static red floor. Takes 1 damage on entry. Watch the floor color.</div></div>
+      <div class="htp-row"><div class="htp-key">🔄 SAW</div><div class="htp-txt">Moving blade that patrols the room. Avoid its path.</div></div>
+      <div class="htp-row"><div class="htp-key">🌫 MIST</div><div class="htp-txt">Poison mist. Take damage each second you remain in the room.</div></div>
+    </div>
+    <div class="htp-section">
+      <h3>CHECKPOINTS & SAVES</h3>
+      <div class="htp-txt" style="line-height:1.8;font-size:12px;">The game auto-saves when you reach checkpoints. You can manually save from the pause menu. When you return to the main menu, you can load from your last checkpoint, safe room, or start a fresh run. Progress like coins, upgrades, and quests is always saved between sessions.</div>
+    </div>
+    <div class="htp-section">
+      <h3>QUESTS & PINNING</h3>
+      <div class="htp-txt" style="line-height:1.8;font-size:12px;">Quests give you specific goals. Pin up to 3 quests — they'll show on your HUD during runs so you can track progress live. Complete quests to earn bonus coins, diamonds, cosmetics, and permanent upgrades.</div>
+    </div>
+    <div class="htp-section">
+      <h3>DIFFICULTY</h3>
+      <div class="htp-row"><div class="htp-key">RELAXED</div><div class="htp-txt">Fewer traps. More coins. Good for learning the maze.</div></div>
+      <div class="htp-row"><div class="htp-key">STANDARD</div><div class="htp-txt">Balanced experience. Default mode.</div></div>
+      <div class="htp-row"><div class="htp-key">BRUTAL</div><div class="htp-txt">Dense traps, fewer safe rooms, harder enemies. Max rewards.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CREDITS ===== -->
+<div class="screen overlay-screen" id="creditsScreen" style="display:none;">
+  <div class="screen-header">
+    <h2>★ CREDITS</h2>
+    <button class="screen-back" onclick="SCREENS.back()">◀ BACK</button>
+  </div>
+  <div class="screen-body">
+    <div class="credits-section">
+      <div class="title-big">ENDLESS MAZE</div>
+      <div style="color:var(--gold);font-family:var(--font-t);letter-spacing:3px;margin-bottom:24px;">v0.26.1 — ARCADE EDITION</div>
+      <div style="color:var(--cyan);font-family:var(--font-t);font-size:11px;letter-spacing:2px;margin-bottom:6px;">DESIGN & DEVELOPMENT</div>
+      <div>Procedural Maze Engine</div>
+      <div>Particle System</div>
+      <div>Quest Framework</div>
+      <div style="margin-top:20px;color:var(--cyan);font-family:var(--font-t);font-size:11px;letter-spacing:2px;margin-bottom:6px;">TECHNOLOGY</div>
+      <div>HTML5 Canvas</div>
+      <div>JavaScript ES2020+</div>
+      <div>CSS3 Animations</div>
+      <div>Web Audio API</div>
+      <div style="margin-top:20px;color:var(--cyan);font-family:var(--font-t);font-size:11px;letter-spacing:2px;margin-bottom:6px;">FONTS</div>
+      <div>Orbitron — Google Fonts</div>
+      <div>Share Tech Mono — Google Fonts</div>
+      <div style="margin-top:30px;color:var(--dim);font-size:10px;letter-spacing:2px;">THANK YOU FOR PLAYING</div>
+      <div style="color:var(--dim);font-size:10px;margin-top:6px;">Go deeper. Find more. Come back stronger.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== LOAD CHECKPOINT ===== -->
+<div class="screen overlay-screen" id="loadScreen" style="display:none;">
+  <div class="screen-header">
+    <h2>🚩 LOAD CHECKPOINT</h2>
+    <button class="screen-back" onclick="SCREENS.back()">◀ BACK</button>
+  </div>
+  <div class="screen-body">
+    <div id="checkpointOptions"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// ENDLESS MAZE v0.26.1 — GAME ENGINE
+// ============================================================
+
+// ---- CONFIG ----
+const CFG = {
+  VERSION:'v0.26.1',
+  CELL:48,       // px per maze cell
+  MAZE_W:60,     // initial maze width in cells
+  MAZE_H:15,     // maze height in cells
+  EXTEND_AT:10,  // extend maze when this many cells from right edge
+  EXTEND_BY:40,  // add this many columns when extending
+  MAX_HP:5,
+  FLOOR_EVERY:8, // cells right = 1 floor
+  COIN_MAGNET:0, // base, upgradeable
+  TRAP_WARN:false,
+  MINIMAP:false,
+  MOVE_DELAY:130, // ms between moves
+  PARTICLE_MAX:120,
+};
+
+// ---- SAVE SYSTEM ----
+const SAVE = {
+  KEY:'endlessmaze_save',
+  data:null,
+  defaults(){
+    return {
+      coins:0, diamonds:0,
+      totalRuns:0, bestFloor:0, totalPlaytime:0,
+      bestSurvivalTime:0, totalDeaths:0,
+      treasureRooms:0, merchantVisits:0, trapsTriggered:0,
+      questsCompleted:0, totalCheckpointsUsed:0, totalRevives:0,
+      coinsLifetime:0, diamondsLifetime:0,
+      settings:{
+        graphicsPreset:'High',
+        shadows:true, particles:'High', glow:true, animBg:true,
+        mazeDetail:'High', screenShake:true, lighting:true,
+        fpsLimit:60, fpsCounter:false, batterySaver:false,
+        reduceEffects:true, masterVol:80, musicVol:60, sfxVol:80,
+        uiSounds:true, trapVol:true,
+        minimap:false, autoPause:true, flashIntensity:'Medium',
+        difficulty:'Standard', coinPopups:true, questHud:true,
+        dmgNumbers:true, timerHud:true, highContrast:false,
+      },
+      upgrades:{
+        coinMagnet:0, moveSpeed:0, checkpointFreq:0,
+        treasureLuck:0, trapWarn:0, diamondFind:0,
+        startBonus:0, safeRoomChance:0,
+      },
+      cosmetics:{ skin:'default', trail:'none', mazeTheme:'stone', uiColor:'cyan' },
+      quests:QUESTS.defaults(),
+      pinnedQuests:['q_coin1','q_deep1','q_trap1'],
+      checkpoints:[],
+      lastSave:null,
+    };
+  },
+  load(){
+    try{
+      const raw = localStorage.getItem(this.KEY);
+      if(raw){ this.data = JSON.parse(raw); }
+      else { this.data = this.defaults(); }
+      // merge missing fields
+      const def = this.defaults();
+      for(const k in def){ if(this.data[k]===undefined) this.data[k]=def[k]; }
+      for(const k in def.settings){ if(this.data.settings[k]===undefined) this.data.settings[k]=def.settings[k]; }
+      for(const k in def.upgrades){ if(this.data.upgrades[k]===undefined) this.data.upgrades[k]=def.upgrades[k]; }
+    }catch(e){ this.data = this.defaults(); }
+  },
+  save(){
+    try{
+      this.data.lastSave = Date.now();
+      localStorage.setItem(this.KEY, JSON.stringify(this.data));
+    }catch(e){}
+  },
+  manualSave(){
+    this.save();
+    TOAST.show('✔ PROGRESS SAVED');
+  },
+  exportSave(){
+    const s = JSON.stringify(this.data);
+    const b = btoa(s);
+    const el = document.createElement('a');
+    el.href='data:text/plain;base64,'+b;
+    el.download='endlessmaze_save.em';
+    el.click();
+    TOAST.show('✔ SAVE EXPORTED');
+  },
+  importSave(){
+    const inp = document.createElement('input');
+    inp.type='file'; inp.accept='.em,.txt';
+    inp.onchange = e => {
+      const f = e.target.files[0];
+      if(!f) return;
+      const r = new FileReader();
+      r.onload = ev => {
+        try{
+          const s = atob(ev.target.result.trim());
+          this.data = JSON.parse(s);
+          this.save();
+          TOAST.show('✔ SAVE IMPORTED');
+          updateMainMenuStats();
+        }catch{ TOAST.show('✖ IMPORT FAILED'); }
+      };
+      r.readAsText(f);
+    };
+    inp.click();
+  },
+  resetProgress(){
+    if(!confirm('RESET ALL PROGRESS? This cannot be undone.')) return;
+    this.data = this.defaults();
+    this.save();
+    TOAST.show('✔ PROGRESS RESET');
+    updateMainMenuStats();
+  },
+};
+
+// ---- TOAST ----
+const TOAST = {
+  el:null, timer:null,
+  init(){ this.el = document.getElementById('toast'); },
+  show(msg, dur=2200){
+    clearTimeout(this.timer);
+    this.el.textContent = msg;
+    this.el.classList.add('show');
+    this.timer = setTimeout(()=>this.el.classList.remove('show'), dur);
+  }
+};
+
+// ---- SCREENS ----
+const SCREENS = {
+  history:[],
+  all:['mainMenu','settingsScreen','questScreen','shopScreen','statsScreen','htpScreen','creditsScreen','loadScreen'],
+  show(id){
+    this.all.forEach(s=>{
+      const el=document.getElementById(s);
+      if(el){ el.style.display='none'; el.classList.remove('active'); }
+    });
+    const el=document.getElementById(id);
+    if(el){ el.style.display='flex'; el.classList.add('active'); this.history.push(id); }
+    if(id==='mainMenu') updateMainMenuStats();
+    if(id==='shopScreen') SHOP.render();
+    if(id==='questScreen') QUESTS.render();
+    if(id==='statsScreen') STATS.render();
+    if(id==='loadScreen') renderCheckpointLoad();
+    if(id==='settingsScreen'){ SETTINGS.init(); }
+    if(id==='stab-savedata') SETTINGS.renderSaveInfo();
+    BGM.playMenu();
+  },
+  back(){
+    this.history.pop();
+    const prev = this.history[this.history.length-1]||'mainMenu';
+    this.history.pop();
+    this.show(prev);
+  },
+  hideAll(){
+    this.all.forEach(s=>{
+      const el=document.getElementById(s);
+      if(el){ el.style.display='none'; el.classList.remove('active'); }
+    });
+    this.history=[];
+  }
+};
+
+// ---- SETTINGS MANAGER ----
+const SETTINGS = {
+  init(){
+    this.renderAll();
+    document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.stab-panel').forEach(p=>p.classList.remove('active'));
+    document.querySelector('.stab').classList.add('active');
+    document.getElementById('stab-graphics').classList.add('active');
+  },
+  tab(name){
+    document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.stab-panel').forEach(p=>p.classList.remove('active'));
+    event.target.classList.add('active');
+    const panel = document.getElementById('stab-'+name);
+    if(panel) panel.classList.add('active');
+    if(name==='savedata') this.renderSaveInfo();
+  },
+  renderAll(){
+    const s = SAVE.data.settings;
+    this.renderToggle('ctrl-shadows', s.shadows, 'shadows', 'On','Off');
+    this.renderOptions('ctrl-particles', s.particles, 'particles', ['Low','Medium','High']);
+    this.renderToggle('ctrl-glow', s.glow, 'glow', 'On','Off');
+    this.renderToggle('ctrl-animBg', s.animBg, 'animBg', 'On','Off');
+    this.renderOptions('ctrl-mazeDetail', s.mazeDetail, 'mazeDetail', ['Low','Medium','High']);
+    this.renderToggle('ctrl-screenShake', s.screenShake, 'screenShake', 'On','Off');
+    this.renderToggle('ctrl-lighting', s.lighting, 'lighting', 'On','Off');
+    this.renderOptions('ctrl-fpsLimit', s.fpsLimit, 'fpsLimit', [30,40,50,60,'Unlimited']);
+    this.renderToggle('ctrl-fpsCounter', s.fpsCounter, 'fpsCounter', 'On','Off');
+    this.renderToggle('ctrl-batterySaver', s.batterySaver, 'batterySaver', 'On','Off');
+    this.renderToggle('ctrl-reduceEffects', s.reduceEffects, 'reduceEffects', 'On','Off');
+    this.renderToggle('ctrl-uiSounds', s.uiSounds, 'uiSounds', 'On','Off');
+    this.renderToggle('ctrl-trapVol', s.trapVol, 'trapVol', 'On','Off');
+    this.renderOptions('ctrl-minimap', s.minimap, 'minimap', [false,true,'Unlocked']);
+    this.renderToggle('ctrl-autoPause', s.autoPause, 'autoPause', 'On','Off');
+    this.renderOptions('ctrl-flashIntensity', s.flashIntensity, 'flashIntensity', ['Low','Medium','High']);
+    this.renderOptions('ctrl-difficulty', s.difficulty, 'difficulty', ['Relaxed','Standard','Brutal']);
+    this.renderToggle('ctrl-coinPopups', s.coinPopups, 'coinPopups', 'On','Off');
+    this.renderToggle('ctrl-questHud', s.questHud, 'questHud', 'On','Off');
+    this.renderToggle('ctrl-dmgNumbers', s.dmgNumbers, 'dmgNumbers', 'On','Off');
+    this.renderToggle('ctrl-timerHud', s.timerHud, 'timerHud', 'On','Off');
+    this.renderToggle('ctrl-highContrast', s.highContrast, 'highContrast', 'On','Off');
+    // volumes
+    const vm = document.getElementById('vol-master'); if(vm) vm.value = s.masterVol;
+    const vmu = document.getElementById('vol-music'); if(vmu) vmu.value = s.musicVol;
+    const vs = document.getElementById('vol-sfx'); if(vs) vs.value = s.sfxVol;
+    // preset
+    document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
+    const pb = document.getElementById('preset-'+s.graphicsPreset);
+    if(pb) pb.classList.add('active');
+  },
+  renderToggle(id, val, key, onLabel, offLabel){
+    const el = document.getElementById(id); if(!el) return;
+    el.innerHTML = `
+      <button class="s-btn ${val?'on':''}" onclick="SETTINGS.set('${key}',true)">${onLabel}</button>
+      <button class="s-btn ${!val?'off':''}" onclick="SETTINGS.set('${key}',false)">${offLabel}</button>`;
+  },
+  renderOptions(id, val, key, opts){
+    const el = document.getElementById(id); if(!el) return;
+    el.innerHTML = opts.map(o=>`<button class="s-btn ${o==val?'active':''}" onclick="SETTINGS.set('${key}',${typeof o==='string'?`'${o}'`:o})">${o===true?'On':o===false?'Off':o}</button>`).join('');
+  },
+  set(key, val){
+    SAVE.data.settings[key] = val;
+    SAVE.save();
+    this.renderAll();
+    HUD.applySettings();
+  },
+  setPreset(name){
+    const s = SAVE.data.settings;
+    s.graphicsPreset = name;
+    if(name==='Low'){ s.particles='Low';s.glow=false;s.animBg=false;s.mazeDetail='Low';s.shadows=false;s.lighting=false;s.fpsLimit=30; }
+    if(name==='Medium'){ s.particles='Medium';s.glow=true;s.animBg=true;s.mazeDetail='Medium';s.shadows=false;s.lighting=true;s.fpsLimit=40; }
+    if(name==='High'){ s.particles='High';s.glow=true;s.animBg=true;s.mazeDetail='High';s.shadows=true;s.lighting=true;s.fpsLimit=60; }
+    if(name==='Ultra'){ s.particles='High';s.glow=true;s.animBg=true;s.mazeDetail='High';s.shadows=true;s.lighting=true;s.fpsLimit=60; }
+    if(name==='Auto'){
+      const gl = navigator.hardwareConcurrency||2;
+      if(gl<=2) this.setPreset('Low');
+      else if(gl<=4) this.setPreset('Medium');
+      else this.setPreset('High');
+      s.graphicsPreset='Auto';
+    }
+    SAVE.save();
+    this.renderAll();
+  },
+  setVol(key, val){
+    SAVE.data.settings[key+'Vol'] = parseInt(val);
+    SAVE.save();
+  },
+  renderSaveInfo(){
+    const d = SAVE.data;
+    const el = document.getElementById('saveInfo'); if(!el) return;
+    const ls = d.lastSave ? new Date(d.lastSave).toLocaleString() : 'Never';
+    el.innerHTML = `
+      <div><span class="k">Last Save:</span><span class="v">${ls}</span></div>
+      <div><span class="k">Coins:</span><span class="v">🪙 ${d.coins}</span></div>
+      <div><span class="k">Diamonds:</span><span class="v">💎 ${d.diamonds}</span></div>
+      <div><span class="k">Best Floor:</span><span class="v">${d.bestFloor||'—'}</span></div>
+      <div><span class="k">Total Runs:</span><span class="v">${d.totalRuns}</span></div>
+      <div><span class="k">Checkpoints Saved:</span><span class="v">${(d.checkpoints||[]).length}</span></div>`;
+  }
+};
+
+// ---- STATS ----
+const STATS = {
+  render(){
+    const d = SAVE.data;
+    const grid = document.getElementById('statsGrid'); if(!grid) return;
+    const fmt = n => n>=3600?`${Math.floor(n/3600)}h ${Math.floor((n%3600)/60)}m`:n>=60?`${Math.floor(n/60)}m ${n%60}s`:`${n}s`;
+    const cards = [
+      {label:'Total Playtime',val:fmt(Math.floor(d.totalPlaytime||0)),cls:''},
+      {label:'Total Runs',val:d.totalRuns,cls:'gold-card'},
+      {label:'Longest Run',val:fmt(Math.floor(d.bestSurvivalTime||0)),cls:''},
+      {label:'Deepest Floor',val:d.bestFloor||0,cls:'purple-card'},
+      {label:'Coins Lifetime',val:'🪙 '+Math.floor(d.coinsLifetime||0),cls:'gold-card'},
+      {label:'Diamonds Lifetime',val:'💎 '+(d.diamondsLifetime||0),cls:''},
+      {label:'Treasure Rooms',val:d.treasureRooms||0,cls:'purple-card'},
+      {label:'Merchants Visited',val:d.merchantVisits||0,cls:''},
+      {label:'Traps Triggered',val:d.trapsTriggered||0,cls:''},
+      {label:'Quests Completed',val:d.questsCompleted||0,cls:'green-card'},
+      {label:'Checkpoints Used',val:d.totalCheckpointsUsed||0,cls:''},
+      {label:'Total Deaths',val:d.totalDeaths||0,cls:''},
+    ];
+    grid.innerHTML = cards.map(c=>`<div class="stat-card ${c.cls}"><div class="s-label">${c.label}</div><div class="s-val">${c.val}</div></div>`).join('');
+  }
+};
+
+// ---- QUESTS ----
+const QUESTS = {
+  list:[
+    // EASY
+    {id:'q_coin1',name:'Coin Collector I',desc:'Collect 250 coins in total',type:'coinsLifetime',target:250,reward:{coins:100},diff:'easy'},
+    {id:'q_coin2',name:'Coin Collector II',desc:'Collect 1000 coins total',type:'coinsLifetime',target:1000,reward:{coins:300},diff:'easy'},
+    {id:'q_surv1',name:'Survivor I',desc:'Survive 2 minutes in one run',type:'runTime',target:120,reward:{coins:80},diff:'easy'},
+    {id:'q_surv2',name:'Survivor II',desc:'Survive 5 minutes in one run',type:'runTime',target:300,reward:{coins:200,diamonds:2},diff:'med'},
+    {id:'q_surv3',name:'Survivor III',desc:'Survive 10 minutes on Brutal',type:'runTimeBrutal',target:600,reward:{coins:500,diamonds:5},diff:'hard'},
+    {id:'q_treas1',name:'Treasure Hunter I',desc:'Enter 3 treasure rooms',type:'treasureRooms',target:3,reward:{coins:120},diff:'easy'},
+    {id:'q_treas2',name:'Treasure Hunter II',desc:'Find 10 treasure rooms total',type:'treasureRooms',target:10,reward:{coins:300,diamonds:3},diff:'med'},
+    {id:'q_chest1',name:'Chest Opener',desc:'Open 5 chests',type:'chestsOpened',target:5,reward:{coins:100},diff:'easy'},
+    {id:'q_merch1',name:'Merchant Friend',desc:'Visit 1 merchant room',type:'merchantVisits',target:1,reward:{coins:100},diff:'easy'},
+    {id:'q_merch2',name:'Regular Customer',desc:'Visit 5 merchant rooms',type:'merchantVisits',target:5,reward:{coins:200,diamonds:2},diff:'med'},
+    // MEDIUM
+    {id:'q_deep1',name:'Deep Diver I',desc:'Reach Floor 8 in one run',type:'floorRun',target:8,reward:{diamonds:5},diff:'med'},
+    {id:'q_deep2',name:'Deep Diver II',desc:'Reach Floor 15 in one run',type:'floorRun',target:15,reward:{diamonds:10,coins:200},diff:'med'},
+    {id:'q_deep3',name:'Abyss Walker',desc:'Reach Floor 30 in one run',type:'floorRun',target:30,reward:{diamonds:25,coins:500},diff:'hard'},
+    {id:'q_trap1',name:'Trap Dodger I',desc:'Clear 12 trap rooms without dying',type:'trapRoomsCleared',target:12,reward:{coins:150},diff:'easy'},
+    {id:'q_trap2',name:'Trap Dodger II',desc:'Avoid all damage for 4 minutes',type:'noDmgTime',target:240,reward:{diamonds:8,coins:200},diff:'hard'},
+    {id:'q_diam1',name:'Diamond Seeker',desc:'Earn 10 diamonds',type:'diamondsLifetime',target:10,reward:{coins:200},diff:'med'},
+    {id:'q_esc1',name:'Great Escape',desc:'Escape a run with 500+ coins',type:'escapeCoins',target:500,reward:{diamonds:5},diff:'med'},
+    {id:'q_runs1',name:'Veteran Runner',desc:'Complete 10 runs',type:'totalRuns',target:10,reward:{coins:300,diamonds:3},diff:'med'},
+    {id:'q_ckpt1',name:'Safety Net',desc:'Use 5 checkpoints',type:'totalCheckpointsUsed',target:5,reward:{coins:150},diff:'easy'},
+    // HARD
+    {id:'q_perfect1',name:'Perfect Run',desc:'Finish a run without using a checkpoint',type:'noCkptRun',target:1,reward:{diamonds:15,coins:500},diff:'hard'},
+    {id:'q_three1',name:'Triple Treasure',desc:'Complete 3 treasure rooms in one run',type:'treasureRunRooms',target:3,reward:{diamonds:10},diff:'hard'},
+  ],
+  progress:{},
+  defaults(){
+    const p={};
+    this.list.forEach(q=>{ p[q.id]={progress:0,completed:false}; });
+    return p;
+  },
+  load(){
+    const saved = SAVE.data.quests||{};
+    this.list.forEach(q=>{
+      this.progress[q.id] = saved[q.id]||{progress:0,completed:false};
+    });
+  },
+  save(){
+    SAVE.data.quests = this.progress;
+  },
+  updateProgress(type, amount){
+    this.list.forEach(q=>{
+      if(q.type!==type) return;
+      const p = this.progress[q.id];
+      if(p.completed) return;
+      p.progress = Math.min(q.target, p.progress + amount);
+      if(p.progress>=q.target){ p.completed=true; this.complete(q); }
+    });
+    this.save();
+    HUD.updateQuests();
+  },
+  setProgress(type, val){
+    this.list.forEach(q=>{
+      if(q.type!==type) return;
+      const p = this.progress[q.id];
+      if(p.completed) return;
+      if(val>p.progress){ p.progress=Math.min(q.target,val); }
+      if(p.progress>=q.target){ p.completed=true; this.complete(q); }
+    });
+    this.save();
+    HUD.updateQuests();
+  },
+  complete(q){
+    SAVE.data.questsCompleted = (SAVE.data.questsCompleted||0)+1;
+    const r = q.reward;
+    if(r.coins){ SAVE.data.coins+=r.coins; SAVE.data.coinsLifetime+=r.coins; }
+    if(r.diamonds){ SAVE.data.diamonds+=r.diamonds; SAVE.data.diamondsLifetime+=r.diamonds; }
+    SAVE.save();
+    TOAST.show(`✔ QUEST COMPLETE: ${q.name}! +${r.coins?'🪙'+r.coins:''}${r.diamonds?'💎'+r.diamonds:''}`, 3000);
+  },
+  render(){
+    const pinned = SAVE.data.pinnedQuests||[];
+    const pinnedEl = document.getElementById('pinnedQuestList');
+    const allEl = document.getElementById('allQuestList');
+    if(!pinnedEl||!allEl) return;
+    pinnedEl.innerHTML = pinned.map(id=>{ const q=this.list.find(x=>x.id===id); return q?this.cardHTML(q,true):''; }).join('');
+    allEl.innerHTML = this.list.map(q=>this.cardHTML(q,pinned.includes(q.id))).join('');
+  },
+  cardHTML(q, isPinned){
+    const p = this.progress[q.id]||{progress:0,completed:false};
+    const pct = Math.min(100, Math.round(p.progress/q.target*100));
+    const r = q.reward;
+    return `<div class="quest-card ${isPinned?'pinned':''} ${p.completed?'done':''}">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="quest-title">${q.name} <span class="quest-diff ${q.diff}">${q.diff.toUpperCase()}</span></span>
+        ${!p.completed?`<button class="quest-pin-btn ${isPinned?'pinned-active':''}" onclick="QUESTS.togglePin('${q.id}')">${isPinned?'📌 PINNED':'PIN'}</button>`:''}
+      </div>
+      <div class="quest-desc">${q.desc}</div>
+      <div class="quest-bar-wrap"><div class="quest-bar ${p.completed?'done':''}" style="width:${pct}%"></div></div>
+      <div style="display:flex;justify-content:space-between;">
+        <span class="quest-progress-txt">${p.progress} / ${q.target}${p.completed?' — ✔ COMPLETE':''}</span>
+        <span class="quest-reward">${r.coins?'🪙'+r.coins+' ':''} ${r.diamonds?'💎'+r.diamonds:''}</span>
+      </div>
+    </div>`;
+  },
+  togglePin(id){
+    const pins = SAVE.data.pinnedQuests||[];
+    const idx = pins.indexOf(id);
+    if(idx>-1){ pins.splice(idx,1); }
+    else if(pins.length<3){ pins.push(id); }
+    else { TOAST.show('⚠ MAX 3 QUESTS PINNED'); return; }
+    SAVE.data.pinnedQuests = pins;
+    SAVE.save();
+    this.render();
+    HUD.updateQuests();
+  },
+};
+
+// ---- SHOP ----
+const SHOP = {
+  currentTab:'upgrades',
+  items:{
+    upgrades:[
+      {id:'u_magnet',name:'Coin Magnet +1',desc:'Auto-collect coins within 1 extra cell range',icon:'🧲',cost:150,costType:'coins',key:'coinMagnet',max:5},
+      {id:'u_speed',name:'Swift Steps',desc:'Slightly reduce move cooldown',icon:'⚡',cost:200,costType:'coins',key:'moveSpeed',max:3},
+      {id:'u_ckptFreq',name:'Checkpoint Beacon',desc:'Checkpoints spawn more often',icon:'🚩',cost:300,costType:'coins',key:'checkpointFreq',max:3},
+      {id:'u_luck',name:'Treasure Luck',desc:'Increases treasure room spawn rate',icon:'🍀',cost:250,costType:'coins',key:'treasureLuck',max:4},
+      {id:'u_trapwarn',name:'Trap Detector',desc:'Flash warning before entering a trap room',icon:'⚠',cost:400,costType:'coins',key:'trapWarn',max:1},
+      {id:'u_diaFind',name:'Diamond Sense',desc:'Increased chance to find diamonds',icon:'💎',cost:5,costType:'diamonds',key:'diamondFind',max:5},
+      {id:'u_start',name:'Bonus Start Pack',desc:'Begin each run with 30 extra coins',icon:'💰',cost:350,costType:'coins',key:'startBonus',max:3},
+      {id:'u_safe',name:'Safe Shelter',desc:'Safe rooms spawn more frequently',icon:'🏡',cost:280,costType:'coins',key:'safeRoomChance',max:3},
+    ],
+    utilities:[
+      {id:'util_revive',name:'Revive Token',desc:'One-use: revive with 2 HP if you die',icon:'💊',cost:200,costType:'coins',consumable:true},
+      {id:'util_compass',name:'Compass',desc:'Reveals direction of next checkpoint for one run',icon:'🧭',cost:100,costType:'coins',consumable:true},
+      {id:'util_shield',name:'Temp Shield',desc:'Block the next trap hit this run',icon:'🛡',cost:150,costType:'coins',consumable:true},
+      {id:'util_freeze',name:'Timer Freeze',desc:'Pause timed trap events for 30 seconds',icon:'❄',cost:3,costType:'diamonds',consumable:true},
+      {id:'util_ckptmark',name:'Checkpoint Marker',desc:'Place an extra checkpoint anywhere once',icon:'📍',cost:180,costType:'coins',consumable:true},
+    ],
+    cosmetics:[
+      {id:'cos_skin1',name:'Neon Runner',desc:'Cyan pulsing player skin',icon:'🔵',cost:3,costType:'diamonds',skinKey:'neon'},
+      {id:'cos_skin2',name:'Gold Phantom',desc:'Golden glowing skin',icon:'🟡',cost:5,costType:'diamonds',skinKey:'gold'},
+      {id:'cos_skin3',name:'Crimson Shade',desc:'Red ghost skin',icon:'🔴',cost:4,costType:'diamonds',skinKey:'crimson'},
+      {id:'cos_trail1',name:'Star Trail',desc:'Leave sparkle trail as you move',icon:'✨',cost:4,costType:'diamonds',trailKey:'star'},
+      {id:'cos_trail2',name:'Smoke Trail',desc:'Dark mist trail',icon:'💨',cost:3,costType:'diamonds',trailKey:'smoke'},
+      {id:'cos_theme1',name:'Neon Maze Theme',desc:'Glowing neon wall style',icon:'🌈',cost:8,costType:'diamonds',themeKey:'neon'},
+      {id:'cos_theme2',name:'Crystal Theme',desc:'Ice-blue crystal maze walls',icon:'💠',cost:6,costType:'diamonds',themeKey:'crystal'},
+    ],
+    rare:[
+      {id:'r_minimap',name:'Minimap Unlock',desc:'Permanently unlock the minimap HUD',icon:'🗺',cost:15,costType:'diamonds',permanent:'minimap'},
+      {id:'r_extrahp',name:'Extra Heart',desc:'Start each run with 6 max HP instead of 5',icon:'❤',cost:20,costType:'diamonds',permanent:'extraHp'},
+      {id:'r_questslot',name:'4th Pin Slot',desc:'Pin 4 quests instead of 3',icon:'📌',cost:12,costType:'diamonds',permanent:'fourthPin'},
+    ],
+  },
+  tab(t){
+    this.currentTab=t;
+    document.querySelectorAll('.shop-tabs .stab').forEach(b=>b.classList.remove('active'));
+    event.target.classList.add('active');
+    this.render();
+  },
+  render(){
+    document.getElementById('shopCoins').textContent=SAVE.data.coins;
+    document.getElementById('shopDiamonds').textContent=SAVE.data.diamonds;
+    const items = this.items[this.currentTab]||[];
+    const grid = document.getElementById('shopGrid'); if(!grid) return;
+    grid.innerHTML = items.map(it=>this.itemHTML(it)).join('');
+  },
+  itemHTML(it){
+    const owned = this.isOwned(it);
+    const lvl = it.key ? (SAVE.data.upgrades[it.key]||0) : 0;
+    const maxed = it.max && lvl>=it.max;
+    return `<div class="shop-item ${owned&&!it.consumable?'owned':''}">
+      <div class="shop-item-icon">${it.icon}</div>
+      <div class="shop-item-name">${it.name}${it.key&&it.max?` <span style="color:var(--dim)">${lvl}/${it.max}</span>`:''}</div>
+      <div class="shop-item-desc">${it.desc}</div>
+      <div class="shop-price ${it.costType}">${it.costType==='coins'?'🪙':'💎'} ${it.cost}</div>
+      ${maxed?'<div style="font-size:9px;color:var(--green);margin-top:6px;">MAX LEVEL</div>':
+        `<button class="shop-buy-btn" onclick="SHOP.buy('${it.id}')">${owned&&!it.consumable?'UPGRADE':'BUY'}</button>`}
+    </div>`;
+  },
+  isOwned(it){
+    if(it.key) return (SAVE.data.upgrades[it.key]||0)>0;
+    if(it.skinKey) return SAVE.data.cosmetics.skin===it.skinKey;
+    if(it.trailKey) return SAVE.data.cosmetics.trail===it.trailKey;
+    if(it.themeKey) return SAVE.data.cosmetics.mazeTheme===it.themeKey;
+    if(it.permanent) return !!(SAVE.data[it.permanent+'Unlocked']);
+    return false;
+  },
+  buy(id){
+    const it = [...Object.values(this.items)].flat().find(x=>x.id===id);
+    if(!it) return;
+    const lvl = it.key?(SAVE.data.upgrades[it.key]||0):0;
+    if(it.max && lvl>=it.max){ TOAST.show('MAX LEVEL REACHED'); return; }
+    const bal = it.costType==='coins'?SAVE.data.coins:SAVE.data.diamonds;
+    if(bal<it.cost){ TOAST.show(`⚠ NOT ENOUGH ${it.costType.toUpperCase()}`); return; }
+    if(it.costType==='coins') SAVE.data.coins-=it.cost;
+    else SAVE.data.diamonds-=it.cost;
+    if(it.key) SAVE.data.upgrades[it.key]=(SAVE.data.upgrades[it.key]||0)+1;
+    if(it.skinKey) SAVE.data.cosmetics.skin=it.skinKey;
+    if(it.trailKey) SAVE.data.cosmetics.trail=it.trailKey;
+    if(it.themeKey) SAVE.data.cosmetics.mazeTheme=it.themeKey;
+    if(it.permanent) SAVE.data[it.permanent+'Unlocked']=true;
+    if(it.consumable){
+      SAVE.data['inv_'+it.id] = (SAVE.data['inv_'+it.id]||0)+1;
+    }
+    SAVE.save();
+    TOAST.show(`✔ PURCHASED: ${it.name}`);
+    this.render();
+  }
+};
+
+// ---- MAZE GENERATOR ----
+const MAZE = {
+  grid:[],
+  width:0, height:0,
+  _themeFor(floor){
+    if(floor<=3) return 'stone';
+    if(floor<=10) return 'neon';
+    if(floor<=20) return 'ancient';
+    if(floor<=32) return 'crystal';
+    if(floor<=46) return 'shadow';
+    if(floor<=62) return 'mechanical';
+    if(floor<=78) return 'cursed';
+    // floors 79-100: cycle neon/crystal/cursed for variety
+    const cycle=['neon','crystal','shadow','mechanical','cursed'];
+    return cycle[(floor-79)%cycle.length];
+  },
+  generate(w, h, startX=0){
+    this.width = w; this.height = h;
+    for(let y=0;y<h;y++){
+      if(!this.grid[y]) this.grid[y]=[];
+      for(let x=startX;x<w;x++){
+        this.grid[y][x]={ x,y, walls:{N:true,E:true,S:true,W:true},
+          type:'normal', visited:false, items:[], trap:null, revealed:false,
+          theme:'stone', explored:false };
+      }
+    }
+    this._carve(startX, Math.floor(h/2));
+    if(startX>0) this._connectSections(startX-1, startX);
+    this._placeSpecials(startX, w);
+    this._placeItems(startX, w);
+  },
+  extend(){
+    const oldW = this.width;
+    const newW = oldW + CFG.EXTEND_BY;
+    this.generate(newW, this.height, oldW);
+    this.width = newW;
+  },
+  _connectSections(leftX, rightX){
+    const h = this.height;
+    const count = 2 + Math.floor(Math.random()*3);
+    for(let i=0;i<count;i++){
+      const band = Math.floor(h/count);
+      let y = Math.floor(band*i + Math.random()*band);
+      y = Math.max(0, Math.min(h-1, y));
+      const L = this.grid[y] && this.grid[y][leftX];
+      const R = this.grid[y] && this.grid[y][rightX];
+      if(L && R){ L.walls.E=false; R.walls.W=false; }
+    }
+  },
+  _carve(sx, sy){
+    const g = this.grid;
+    const h = this.height;
+    // Mark all pre-existing cells (x < sx) as visited so carver stays in new region
+    for(let y2=0;y2<h;y2++)
+      for(let x2=0;x2<sx;x2++)
+        if(g[y2]&&g[y2][x2]) g[y2][x2].visited=true;
+    if(!g[sy]||!g[sy][sx]) return;
+    const stack=[{x:sx,y:sy}];
+    g[sy][sx].visited=true;
+    while(stack.length){
+      const cur=stack[stack.length-1];
+      const {x,y}=cur;
+      const dirs=[{d:'N',nx:x,ny:y-1},{d:'E',nx:x+1,ny:y},{d:'S',nx:x,ny:y+1},{d:'W',nx:x-1,ny:y}];
+      const avail=dirs.filter(({nx,ny})=>ny>=0&&ny<h&&nx<this.width&&g[ny]&&g[ny][nx]&&!g[ny][nx].visited);
+      if(!avail.length){ stack.pop(); continue; }
+      const {d,nx,ny}=avail[Math.floor(Math.random()*avail.length)];
+      const opp={N:'S',E:'W',S:'N',W:'E'};
+      g[y][x].walls[d]=false;
+      g[ny][nx].walls[opp[d]]=false;
+      g[ny][nx].visited=true;
+      stack.push({x:nx,y:ny});
+    }
+    // reset all visited flags
+    for(let y2=0;y2<h;y2++) for(let x2=0;x2<this.width;x2++) if(g[y2]&&g[y2][x2]) g[y2][x2].visited=false;
+  },
+  _placeSpecials(sx, ex){
+    const diff = SAVE.data.settings.difficulty;
+    const trapBase = diff==='Brutal'?0.35:diff==='Relaxed'?0.1:0.22;
+    const safeDensity = diff==='Brutal'?0.03:diff==='Relaxed'?0.1:0.06;
+    const ckptFreqMod = 1+(SAVE.data.upgrades.checkpointFreq||0)*0.3;
+    for(let y=0;y<this.height;y++){
+      for(let x=sx;x<ex;x++){
+        const cell = this.grid[y]&&this.grid[y][x];
+        if(!cell) continue;
+        const floor = Math.min(100, Math.floor(x/CFG.FLOOR_EVERY)+1);
+        const depthScale = Math.min(2.0, 1+(floor-1)/50);
+        const trapDensity = Math.min(0.55, trapBase*depthScale);
+        const r = Math.random();
+        if(x>0&&x%Math.max(3,Math.round(14/ckptFreqMod))===0&&r<0.15) cell.type='checkpoint';
+        else if(r<safeDensity) cell.type='safe';
+        else if(r<safeDensity+0.07+(SAVE.data.upgrades.treasureLuck||0)*0.02) cell.type='treasure';
+        else if(r<safeDensity+0.07+0.03+(SAVE.data.upgrades.treasureLuck||0)*0.01) cell.type='merchant';
+        else if(r<safeDensity+0.07+0.03+0.01) cell.type='diamond_vault';
+        else if(r<trapDensity) cell.type='trap';
+        cell.theme = this._themeFor(floor);
+      }
+    }
+  },
+  _placeItems(sx, ex){
+    const diaChance = 0.06+(SAVE.data.upgrades.diamondFind||0)*0.03;
+    for(let y=0;y<this.height;y++){
+      for(let x=sx;x<ex;x++){
+        const cell=this.grid[y]&&this.grid[y][x]; if(!cell) continue;
+        if(cell.type==='treasure'){
+          cell.items=[{type:'chest',opened:false},{type:'coin',value:5,collected:false}];
+          if(Math.random()<diaChance+0.2) cell.items.push({type:'diamond',value:1,collected:false});
+        } else if(cell.type==='diamond_vault'){
+          cell.items=[{type:'diamond',value:2,collected:false},{type:'diamond',value:1,collected:false}];
+        } else if(cell.type==='safe'){
+          cell.items=[{type:'coin',value:2,collected:false}];
+          if(Math.random()<0.3) cell.items.push({type:'coin',value:1,collected:false});
+        } else if(cell.type==='trap'){
+          if(Math.random()<0.3) cell.items.push({type:'coin',value:3,collected:false});
+        } else {
+          if(Math.random()<0.6) cell.items.push({type:'coin',value:1,collected:false});
+          if(Math.random()<0.15) cell.items.push({type:'coin',value:2,collected:false});
+          if(Math.random()<diaChance) cell.items.push({type:'diamond',value:1,collected:false});
+        }
+        if(cell.type==='trap'){
+          const tTypes=['spike','spike','spike','mist','saw'];
+          cell.trap={type:tTypes[Math.floor(Math.random()*tTypes.length)],triggered:false,sawOffset:0};
+        }
+      }
+    }
+  },
+  cell(x,y){
+    return (this.grid[y]&&this.grid[y][x])||null;
+  }
+};
+
+// ---- PLAYER ----
+const PLAYER = {
+  x:1, y:7,
+  px:1, py:7, // pixel lerp pos (in cell units)
+  hp:5, maxHp:5,
+  moving:false, moveTime:0,
+  coinsThisRun:0, diamondsThisRun:0,
+  runTime:0, roomsCleared:0, trapsHit:0,
+  checkpointX:1, checkpointY:7,
+  noDmgTimer:0,
+  treasureThisRun:0,
+  boosts:[],
+  invRevive:0, invShield:false, invCompass:false, invFreeze:false,
+  init(){
+    this.x=1; this.y=Math.floor(CFG.MAZE_H/2);
+    this.px=this.x; this.py=this.y;
+    this.hp=CFG.MAX_HP+(SAVE.data['extraHpUnlocked']?1:0);
+    this.maxHp=this.hp;
+    this.coinsThisRun=SAVE.data.upgrades.startBonus*30||0;
+    this.diamondsThisRun=0;
+    this.runTime=0; this.roomsCleared=0; this.trapsHit=0;
+    this.noDmgTimer=0; this.treasureThisRun=0;
+    this.boosts=[];
+    this.invRevive=SAVE.data['inv_util_revive']||0;
+    this.invShield=false; this.invCompass=false;
+    this.moving=false; this.moveTime=0;
+    MAZE.grid[this.y][this.x].explored=true;
+  },
+  tryMove(dx, dy){
+    if(this.moving) return;
+    if(STATE.paused) return;
+    const cell = MAZE.cell(this.x, this.y); if(!cell) return;
+    const dir = dx===1?'E':dx===-1?'W':dy===1?'S':'N';
+    if(cell.walls[dir]) return; // wall blocks
+    const nx=this.x+dx, ny=this.y+dy;
+    const next=MAZE.cell(nx,ny); if(!next) return;
+    const spd = Math.max(80, CFG.MOVE_DELAY - (SAVE.data.upgrades.moveSpeed||0)*15);
+    this.moving=true; this.moveTime=spd;
+    this.px=this.x; this.py=this.y;
+    this.x=nx; this.y=ny;
+    // check maze extension
+    if(this.x >= MAZE.width - CFG.EXTEND_AT){ MAZE.extend(); }
+  },
+  update(dt){
+    // lerp visual position
+    if(this.moving){
+      this.moveTime -= dt;
+      const spd = Math.max(80, CFG.MOVE_DELAY - (SAVE.data.upgrades.moveSpeed||0)*15);
+      const t = Math.max(0, 1 - this.moveTime/spd);
+      this.px = this.px + (this.x - this.px)*Math.min(1, t*3);
+      this.py = this.py + (this.y - this.py)*Math.min(1, t*3);
+      if(this.moveTime<=0){
+        this.moving=false;
+        this.px=this.x; this.py=this.y;
+        this.onCellEnter();
+      }
+    }
+    this.runTime += dt/1000;
+    if(!STATE.damageCooldown || STATE.damageCooldown<=0) this.noDmgTimer += dt/1000;
+    if(STATE.damageCooldown>0) STATE.damageCooldown-=dt;
+    // process boosts
+    this.boosts=this.boosts.filter(b=>{ b.time-=dt/1000; return b.time>0; });
+    HUD.updateBoosts();
+  },
+  onCellEnter(){
+    const cell = MAZE.cell(this.x, this.y); if(!cell) return;
+    if(!cell.explored){ cell.explored=true; this.roomsCleared++; }
+    // collect items
+    const mag = SAVE.data.upgrades.coinMagnet||0;
+    this._collectInRadius(mag);
+    // trap
+    if(cell.type==='trap' && cell.trap && !cell.trap.triggered){
+      if(this.invShield){ this.invShield=false; TOAST.show('🛡 SHIELD BLOCKED TRAP!'); }
+      else { this.takeDamage(1, cell.trap.type); cell.trap.triggered=true; }
+      SAVE.data.trapsTriggered=(SAVE.data.trapsTriggered||0)+1;
+      QUESTS.updateProgress('trapRoomsCleared',0); // track trap rooms cleared (no damage = incremented separately)
+    }
+    // checkpoint
+    if(cell.type==='checkpoint'){
+      this.checkpointX=this.x; this.checkpointY=this.y;
+      SAVE.data.totalCheckpointsUsed=(SAVE.data.totalCheckpointsUsed||0)+1;
+      QUESTS.updateProgress('totalCheckpointsUsed',1);
+      this._saveCheckpoint();
+      TOAST.show('🚩 CHECKPOINT SAVED!');
+      PARTICLES.burst(this.x*CFG.CELL+CFG.CELL/2, this.y*CFG.CELL+CFG.CELL/2, '#00ff88', 20);
+    }
+    // safe room healing
+    if(cell.type==='safe' && this.hp<this.maxHp){ this.hp++; TOAST.show('💙 RESTORED 1 HP'); }
+    // treasure
+    if(cell.type==='treasure' || cell.type==='diamond_vault'){
+      if(!cell._countedTreasure){ cell._countedTreasure=true;
+        this.treasureThisRun++;
+        SAVE.data.treasureRooms=(SAVE.data.treasureRooms||0)+1;
+        QUESTS.updateProgress('treasureRooms',1);
+        QUESTS.updateProgress('treasureRunRooms',1);
+      }
+    }
+    // merchant
+    if(cell.type==='merchant' && !cell._merchantVisited){
+      cell._merchantVisited=true;
+      SAVE.data.merchantVisits=(SAVE.data.merchantVisits||0)+1;
+      QUESTS.updateProgress('merchantVisits',1);
+      setTimeout(()=>GAME.openMerchant(cell),300);
+    }
+    // floor tracking
+    const floor = Math.min(100, Math.floor(this.x/CFG.FLOOR_EVERY)+1);
+    if(floor>STATE.currentFloor){ STATE.currentFloor=floor;
+      if(floor>(SAVE.data.bestFloor||0)){ SAVE.data.bestFloor=floor;
+        if(floor===100) TOAST.show('🏆 FLOOR 100 REACHED — MAXIMUM DEPTH!', 4000);
+        else if(floor%10===0) TOAST.show('★ FLOOR '+floor+' REACHED! NEW RECORD', 3000);
+        else TOAST.show('★ NEW DEEPEST FLOOR: '+floor);
+      } else if(floor%10===0){ TOAST.show('⚡ FLOOR '+floor+' — GOING DEEPER!'); }
+      QUESTS.setProgress('floorRun', floor);
+    }
+    QUESTS.setProgress('noDmgTime', Math.floor(this.noDmgTimer));
+    QUESTS.setProgress('runTime', Math.floor(this.runTime));
+    HUD.update();
+    MINIMAP.update();
+  },
+  _collectInRadius(mag){
+    for(let dy2=-mag;dy2<=mag;dy2++){
+      for(let dx2=-mag;dx2<=mag;dx2++){
+        const c=MAZE.cell(this.x+dx2,this.y+dy2); if(!c) continue;
+        c.items.forEach(item=>{
+          if(item.collected) return;
+          if(item.type==='coin'){ item.collected=true; this._addCoins(item.value); }
+          if(item.type==='diamond'){ item.collected=true; this._addDiamonds(item.value); }
+          if(item.type==='chest'&&dx2===0&&dy2===0){ item.opened=true; this._openChest(); }
+        });
+      }
+    }
+  },
+  _addCoins(n){
+    this.coinsThisRun+=n;
+    SAVE.data.coinsLifetime=(SAVE.data.coinsLifetime||0)+n;
+    QUESTS.updateProgress('coinsLifetime',n);
+    if(SAVE.data.settings.coinPopups) GAME.spawnCoinPopup(n);
+    PARTICLES.burst(this.x*CFG.CELL+CFG.CELL/2,this.y*CFG.CELL+CFG.CELL/2,'#ffd700',6);
+    HUD.update();
+  },
+  _addDiamonds(n){
+    this.diamondsThisRun+=n;
+    SAVE.data.diamondsLifetime=(SAVE.data.diamondsLifetime||0)+n;
+    QUESTS.updateProgress('diamondsLifetime',n);
+    PARTICLES.burst(this.x*CFG.CELL+CFG.CELL/2,this.y*CFG.CELL+CFG.CELL/2,'#00e5ff',8);
+    HUD.update();
+  },
+  _openChest(){
+    const r=Math.random();
+    const luckMod = 1+(SAVE.data.upgrades.treasureLuck||0)*0.15;
+    if(r<0.1*luckMod){ this._addDiamonds(Math.ceil(Math.random()*3)); TOAST.show('💎 DIAMOND CHEST!'); }
+    else { this._addCoins(Math.ceil(Math.random()*15+5)*luckMod); }
+    QUESTS.updateProgress('chestsOpened',1);
+  },
+  takeDamage(n, type=''){
+    if(STATE.damageCooldown>0) return;
+    if(type==='mist'&&this.boosts.find(b=>b.type==='shield')) return;
+    this.hp-=n;
+    this.noDmgTimer=0;
+    STATE.damageCooldown=1200;
+    GAME.flashDamage();
+    if(SAVE.data.settings.screenShake) GAME.shakeScreen();
+    if(SAVE.data.settings.dmgNumbers) GAME.showDmgNumber(n);
+    SAVE.data.trapsTriggered=(SAVE.data.trapsTriggered||0)+1;
+    this.trapsHit++;
+    HUD.update();
+    if(this.hp<=0) GAME.playerDied();
+  },
+  _saveCheckpoint(){
+    const ckpts = SAVE.data.checkpoints||[];
+    const ckpt = {x:this.x,y:this.y,floor:STATE.currentFloor,time:Date.now(),runCoins:this.coinsThisRun};
+    ckpts.unshift(ckpt);
+    SAVE.data.checkpoints = ckpts.slice(0,5);
+    SAVE.save();
+  },
+  getFloor(){ return Math.floor(this.x/CFG.FLOOR_EVERY)+1; }
+};
+
+// ---- CAMERA ----
+const CAM = {
+  x:0, y:0, tx:0, ty:0,
+  update(cw,ch){
+    this.tx = PLAYER.px*CFG.CELL - cw/2 + CFG.CELL/2;
+    this.ty = PLAYER.py*CFG.CELL - ch/2 + CFG.CELL/2;
+    this.x += (this.tx-this.x)*0.12;
+    this.y += (this.ty-this.y)*0.12;
+  }
+};
+
+// ---- PARTICLE SYSTEM ----
+const PARTICLES = {
+  list:[],
+  burst(wx,wy,color,n){
+    const s = SAVE.data.settings.particles;
+    const count = s==='Low'?Math.ceil(n/3):s==='Medium'?Math.ceil(n/2):n;
+    for(let i=0;i<count;i++){
+      const a=Math.random()*Math.PI*2;
+      const spd=1+Math.random()*3;
+      this.list.push({x:wx,y:wy,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd-1,
+        life:1,maxLife:0.6+Math.random()*0.4,color,size:2+Math.random()*3});
+    }
+    if(this.list.length>CFG.PARTICLE_MAX) this.list.splice(0,this.list.length-CFG.PARTICLE_MAX);
+  },
+  update(dt){
+    const dtS=dt/1000;
+    this.list=this.list.filter(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.vy+=0.15;
+      p.life-=dtS/p.maxLife;
+      return p.life>0;
+    });
+  },
+  draw(ctx,offX,offY){
+    if(SAVE.data.settings.particles==='Low'&&Math.random()<0.5) return;
+    this.list.forEach(p=>{
+      ctx.globalAlpha=p.life*0.9;
+      ctx.fillStyle=p.color;
+      ctx.beginPath();
+      ctx.arc(p.x-offX,p.y-offY,p.size*p.life,0,Math.PI*2);
+      ctx.fill();
+    });
+    ctx.globalAlpha=1;
+  }
+};
+
+// ---- RENDERER ----
+const RENDERER = {
+  themeColors:{
+    stone:{floor:'#0f0f18',wall:'#1e1e30',wallBright:'#2a2a45',accent:'#333355'},
+    neon:{floor:'#050510',wall:'#003333',wallBright:'#005555',accent:'#00e5ff'},
+    ancient:{floor:'#100a05',wall:'#3a2510',wallBright:'#5a3a18',accent:'#cc7700'},
+    crystal:{floor:'#050a15',wall:'#0a1530',wallBright:'#1a3060',accent:'#4488ff'},
+    shadow:{floor:'#080510',wall:'#15052a',wallBright:'#250a40',accent:'#8800ff'},
+    mechanical:{floor:'#0a0a0a',wall:'#1a1a1a',wallBright:'#303030',accent:'#ff8800'},
+    cursed:{floor:'#0a0800',wall:'#2a2000',wallBright:'#3a3000',accent:'#ffd700'},
+  },
+  cellTypeColors:{
+    checkpoint:{floor:'#001a0a',glow:'#00ff88'},
+    treasure:{floor:'#1a1200',glow:'#ffd700'},
+    merchant:{floor:'#0a0015',glow:'#9900ff'},
+    safe:{floor:'#000a15',glow:'#00e5ff'},
+    diamond_vault:{floor:'#000515',glow:'#00aaff'},
+    trap:{floor:'#1a0003',glow:'#ff2244'},
+  },
+  draw(ctx, canvas){
+    const cw=canvas.width, ch=canvas.height;
+    CAM.update(cw,ch);
+    ctx.clearRect(0,0,cw,ch);
+    ctx.fillStyle='#030305';
+    ctx.fillRect(0,0,cw,ch);
+    const cs=CFG.CELL;
+    const offX=CAM.x, offY=CAM.y;
+    const startCX=Math.max(0,Math.floor(offX/cs)-1);
+    const endCX=Math.min(MAZE.width-1,Math.ceil((offX+cw)/cs)+1);
+    const startCY=Math.max(0,Math.floor(offY/cs)-1);
+    const endCY=Math.min(MAZE.height-1,Math.ceil((offY+ch)/cs)+1);
+    for(let y=startCY;y<=endCY;y++){
+      for(let x=startCX;x<=endCX;x++){
+        const cell=MAZE.cell(x,y); if(!cell) continue;
+        this.drawCell(ctx,cell,x,y,offX,offY,cs);
+      }
+    }
+    // draw player
+    this.drawPlayer(ctx, offX, offY, cs);
+    // draw particles
+    PARTICLES.draw(ctx, offX, offY);
+  },
+  drawCell(ctx,cell,x,y,offX,offY,cs){
+    const px=x*cs-offX, py=y*cs-offY;
+    const tc=this.themeColors[cell.theme]||this.themeColors.stone;
+    const typeC=this.cellTypeColors[cell.type];
+    // floor
+    ctx.fillStyle = typeC?typeC.floor:tc.floor;
+    ctx.fillRect(px,py,cs,cs);
+    // glow overlay for special rooms
+    if(typeC&&SAVE.data.settings.glow){
+      const grad=ctx.createRadialGradient(px+cs/2,py+cs/2,0,px+cs/2,py+cs/2,cs*0.7);
+      grad.addColorStop(0,typeC.glow+'22');
+      grad.addColorStop(1,'transparent');
+      ctx.fillStyle=grad;
+      ctx.fillRect(px,py,cs,cs);
+    }
+    // items
+    cell.items.forEach(it=>{
+      if(it.collected||it.opened) return;
+      if(it.type==='coin'){ this.drawCoin(ctx,px+cs/2,py+cs/2,8,it.value>1); }
+      if(it.type==='diamond'){ this.drawDiamond(ctx,px+cs/2,py+cs/2,7); }
+      if(it.type==='chest'){ this.drawChest(ctx,px+cs/2,py+cs*0.55); }
+    });
+    // trap
+    if(cell.type==='trap'&&cell.trap&&!cell.trap.triggered) this.drawTrap(ctx,px,py,cs,cell.trap.type);
+    // special markers
+    if(cell.type==='checkpoint') this.drawCheckpointMarker(ctx,px,py,cs);
+    if(cell.type==='merchant') this.drawMerchantMarker(ctx,px,py,cs);
+    if(cell.type==='safe') this.drawSafeMarker(ctx,px,py,cs);
+    // walls
+    const wc=tc.wallBright; const wt=3;
+    ctx.fillStyle=wc;
+    if(cell.walls.N) ctx.fillRect(px,py,cs,wt);
+    if(cell.walls.S) ctx.fillRect(px,py+cs-wt,cs,wt);
+    if(cell.walls.W) ctx.fillRect(px,py,wt,cs);
+    if(cell.walls.E) ctx.fillRect(px+cs-wt,py,wt,cs);
+  },
+  drawPlayer(ctx,offX,offY,cs){
+    const px=PLAYER.px*cs-offX+cs/2;
+    const py=PLAYER.py*cs-offY+cs/2;
+    const skin=SAVE.data.cosmetics.skin;
+    const colors={default:'#00e5ff',neon:'#00e5ff',gold:'#ffd700',crimson:'#ff2244'};
+    const c=colors[skin]||'#00e5ff';
+    const t=Date.now()/1000;
+    const pulse=Math.sin(t*3)*1.5;
+    if(SAVE.data.settings.glow){
+      ctx.shadowColor=c; ctx.shadowBlur=16+pulse;
+    }
+    ctx.fillStyle=c;
+    ctx.beginPath(); ctx.arc(px,py,9+pulse*0.3,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+    // inner dot
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(px,py,3,0,Math.PI*2); ctx.fill();
+    // direction indicator
+    const lastDir = INPUT.lastDir;
+    if(lastDir){
+      const dmap={N:[0,-1],S:[0,1],E:[1,0],W:[-1,0]};
+      const [ddx,ddy]=dmap[lastDir]||[0,0];
+      ctx.fillStyle=c; ctx.globalAlpha=0.7;
+      ctx.beginPath(); ctx.arc(px+ddx*7,py+ddy*7,3,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=1;
+    }
+  },
+  drawCoin(ctx,cx,cy,r,big){
+    ctx.fillStyle=big?'#ffaa00':'#ffd700';
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#ffee88'; ctx.lineWidth=1.5;
+    ctx.stroke();
+  },
+  drawDiamond(ctx,cx,cy,r){
+    ctx.fillStyle='#00aaff';
+    ctx.beginPath();
+    ctx.moveTo(cx,cy-r); ctx.lineTo(cx+r,cy); ctx.lineTo(cx,cy+r); ctx.lineTo(cx-r,cy);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#aaddff'; ctx.lineWidth=1; ctx.stroke();
+  },
+  drawChest(ctx,cx,cy){
+    ctx.fillStyle='#8b4513';
+    ctx.fillRect(cx-10,cy-7,20,14);
+    ctx.fillStyle='#a0522d';
+    ctx.fillRect(cx-10,cy-7,20,6);
+    ctx.fillStyle='#ffd700';
+    ctx.fillRect(cx-3,cy-2,6,5);
+    ctx.strokeStyle='#daa520'; ctx.lineWidth=1.5;
+    ctx.strokeRect(cx-10,cy-7,20,14);
+  },
+  drawTrap(ctx,px,py,cs,type){
+    if(type==='spike'||type==='saw'){
+      ctx.fillStyle='rgba(255,34,68,0.15)';
+      ctx.fillRect(px,py,cs,cs);
+      ctx.fillStyle='#ff2244';
+      const n=4;
+      for(let i=0;i<n;i++){
+        const sx=px+8+i*(cs-16)/(n-1);
+        ctx.beginPath(); ctx.moveTo(sx,py+cs-8); ctx.lineTo(sx+5,py+cs-18); ctx.lineTo(sx+10,py+cs-8);
+        ctx.fill();
+      }
+    } else if(type==='mist'){
+      ctx.fillStyle='rgba(0,180,80,0.1)';
+      ctx.fillRect(px,py,cs,cs);
+      for(let i=0;i<3;i++){
+        ctx.fillStyle='rgba(0,200,80,0.2)';
+        ctx.beginPath();
+        ctx.arc(px+12+i*12,py+cs/2+Math.sin(Date.now()/500+i)*5,8,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+  },
+  drawCheckpointMarker(ctx,px,py,cs){
+    ctx.fillStyle='rgba(0,255,136,0.2)';
+    ctx.fillRect(px,py,cs,cs);
+    ctx.strokeStyle='#00ff88'; ctx.lineWidth=2;
+    ctx.strokeRect(px+2,py+2,cs-4,cs-4);
+    ctx.fillStyle='#00ff88';
+    ctx.font='18px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🚩',px+cs/2,py+cs/2);
+  },
+  drawMerchantMarker(ctx,px,py,cs){
+    ctx.fillStyle='rgba(153,0,255,0.15)';
+    ctx.fillRect(px,py,cs,cs);
+    ctx.strokeStyle='#9900ff'; ctx.lineWidth=2;
+    ctx.strokeRect(px+2,py+2,cs-4,cs-4);
+    ctx.font='18px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('💜',px+cs/2,py+cs/2);
+  },
+  drawSafeMarker(ctx,px,py,cs){
+    ctx.fillStyle='rgba(0,100,200,0.15)';
+    ctx.fillRect(px,py,cs,cs);
+    ctx.font='16px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('💙',px+cs/2,py+cs/2);
+  },
+};
+
+// ---- MINIMAP ----
+const MINIMAP = {
+  canvas:null, ctx:null,
+  init(){ this.canvas=document.getElementById('minimapCanvas'); this.ctx=this.canvas.getContext('2d'); },
+  update(){
+    if(!SAVE.data.settings.minimap && !SAVE.data.minimapUnlocked) return;
+    const c=this.canvas; const ctx=this.ctx;
+    const cw=c.width,ch=c.height;
+    ctx.clearRect(0,0,cw,ch);
+    ctx.fillStyle='rgba(5,5,10,0.9)'; ctx.fillRect(0,0,cw,ch);
+    const scale=3;
+    const ox=PLAYER.x-Math.floor(cw/scale/2);
+    const oy=PLAYER.y-Math.floor(ch/scale/2);
+    for(let y=0;y<MAZE.height;y++){
+      for(let x=Math.max(0,ox);x<Math.min(MAZE.width,ox+cw/scale+1);x++){
+        const cell=MAZE.cell(x,y); if(!cell||!cell.explored) continue;
+        const mx=(x-ox)*scale, my=y*scale;
+        const tcs={checkpoint:'#00ff88',treasure:'#ffd700',merchant:'#9900ff',
+          safe:'#00aaff',diamond_vault:'#0066ff',trap:'#ff2244',normal:'#1a1a2a'};
+        ctx.fillStyle=tcs[cell.type]||'#1a1a2a';
+        ctx.fillRect(mx,my,scale,scale);
+      }
+    }
+    // player dot
+    const ppx=(PLAYER.x-ox)*scale, ppy=PLAYER.y*scale;
+    ctx.fillStyle='#00e5ff'; ctx.fillRect(ppx,ppy,scale,scale);
+  }
+};
+
+// ---- HUD ----
+const HUD = {
+  update(){
+    document.getElementById('hudCoins').textContent='🪙 '+PLAYER.coinsThisRun;
+    document.getElementById('hudDiamonds').textContent='💎 '+PLAYER.diamondsThisRun;
+    document.getElementById('hudFloor').textContent='FLOOR '+STATE.currentFloor;
+    this.updateHP();
+    this.updateTimer();
+  },
+  updateHP(){
+    const bar=document.getElementById('hudHP'); if(!bar) return;
+    bar.innerHTML='';
+    for(let i=0;i<PLAYER.maxHp;i++){
+      const p=document.createElement('div');
+      p.className='hud-hp-pip'+(i>=PLAYER.hp?' empty':'');
+      bar.appendChild(p);
+    }
+  },
+  updateTimer(){
+    const t=PLAYER.runTime;
+    const m=Math.floor(t/60), s=Math.floor(t%60);
+    document.getElementById('hudTimer').textContent=(SAVE.data.settings.timerHud?`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:'');
+  },
+  updateQuests(){
+    if(!SAVE.data.settings.questHud){ document.getElementById('hudQuests').style.display='none'; return; }
+    const el=document.getElementById('hudQuests'); if(!el) return;
+    el.style.display='block';
+    const pins=SAVE.data.pinnedQuests||[];
+    let html='<div class="hud-quest-title">📋 PINNED QUESTS</div>';
+    pins.forEach(id=>{
+      const q=QUESTS.list.find(x=>x.id===id); if(!q) return;
+      const p=QUESTS.progress[q.id]||{progress:0};
+      const pct=Math.min(100,Math.round(p.progress/q.target*100));
+      html+=`<div class="hud-quest-item">
+        <div class="hud-quest-name">${q.name}</div>
+        <div class="hud-quest-progress"><div class="hud-quest-fill" style="width:${pct}%"></div></div>
+        <div class="hud-quest-txt">${p.progress}/${q.target}</div>
+      </div>`;
+    });
+    el.innerHTML=html;
+  },
+  updateBoosts(){
+    const el=document.getElementById('hudBoosts'); if(!el) return;
+    el.innerHTML=PLAYER.boosts.map(b=>`<div class="boost-chip">${b.icon} ${b.name} ${Math.ceil(b.time)}s</div>`).join('');
+  },
+  applySettings(){
+    const s=SAVE.data.settings;
+    document.getElementById('fpsdisplay').style.display=s.fpsCounter?'block':'none';
+    const mc=document.getElementById('minimapCanvas');
+    if(mc) mc.style.display=(s.minimap||SAVE.data.minimapUnlocked)?'block':'none';
+    document.getElementById('hudQuests').style.display=s.questHud?'block':'none';
+  },
+  show(){ document.getElementById('hud').classList.add('active'); },
+  hide(){ document.getElementById('hud').classList.remove('active'); }
+};
+
+// ---- INPUT ----
+const INPUT = {
+  keys:{}, lastDir:null,
+  init(){
+    document.addEventListener('keydown',e=>this.onKey(e));
+    document.addEventListener('keyup',e=>{ this.keys[e.code]=false; });
+    document.addEventListener('visibilitychange',()=>{
+      if(document.hidden&&SAVE.data.settings.autoPause&&STATE.running&&!STATE.paused) GAME.pause();
+    });
+    ['dbUp','dbDown','dbLeft','dbRight'].forEach(id=>{
+      const btn=document.getElementById(id); if(!btn) return;
+      const map={dbUp:['w','ArrowUp'],dbDown:['s','ArrowDown'],dbLeft:['a','ArrowLeft'],dbRight:['d','ArrowRight']};
+      btn.addEventListener('touchstart',e=>{e.preventDefault();this.simulateKey(map[id][0]);},{passive:false});
+      btn.addEventListener('mousedown',e=>{this.simulateKey(map[id][0]);});
+    });
+  },
+  simulateKey(k){ this.handleMove(k); },
+  onKey(e){
+    if(!STATE.running) return;
+    if(e.code==='Escape'||e.code==='KeyP'){
+      if(STATE.paused) GAME.resume(); else GAME.pause(); return;
+    }
+    this.handleMove(e.key||e.code);
+  },
+  handleMove(key){
+    if(STATE.paused||!STATE.running) return;
+    const map={'w':'N','ArrowUp':'N','s':'S','ArrowDown':'S','a':'W','ArrowLeft':'W','d':'E','ArrowRight':'E'};
+    const dir=map[key.toLowerCase()]||map[key];
+    if(!dir) return;
+    this.lastDir=dir;
+    const dmap={N:[0,-1],S:[0,1],E:[1,0],W:[-1,0]};
+    const [dx,dy]=dmap[dir];
+    PLAYER.tryMove(dx,dy);
+  }
+};
+
+// ---- BACKGROUND MENU ANIMATION ----
+const BGANIM = {
+  canvas:null, ctx:null,
+  cells:[],gw:0,gh:0,cs:32,
+  traces:[],particles:[],
+  init(){
+    this.canvas=document.getElementById('bgCanvas');
+    if(!this.canvas) return;
+    this.ctx=this.canvas.getContext('2d');
+    this.resize();
+    window.addEventListener('resize',()=>this.resize());
+    this.genGrid();
+    this.loop();
+  },
+  resize(){
+    if(!this.canvas) return;
+    this.canvas.width=window.innerWidth;
+    this.canvas.height=window.innerHeight;
+    this.genGrid();
+  },
+  genGrid(){
+    if(!this.canvas) return;
+    this.gw=Math.ceil(this.canvas.width/this.cs)+2;
+    this.gh=Math.ceil(this.canvas.height/this.cs)+2;
+    this.cells=[];
+    for(let y=0;y<this.gh;y++){
+      this.cells[y]=[];
+      for(let x=0;x<this.gw;x++){
+        this.cells[y][x]={walls:{N:Math.random()<0.4,E:Math.random()<0.4,S:Math.random()<0.4,W:Math.random()<0.4}};
+      }
+    }
+    // spawn particles
+    this.particles=Array.from({length:30},()=>({
+      x:Math.random()*this.canvas.width, y:Math.random()*this.canvas.height,
+      vx:(Math.random()-0.5)*0.3, vy:(Math.random()-0.5)*0.3,
+      size:Math.random()*2+0.5, alpha:Math.random()*0.4+0.1,
+    }));
+  },
+  addTrace(){
+    if(this.traces.length>6) return;
+    this.traces.push({
+      x:Math.floor(Math.random()*this.gw), y:Math.floor(Math.random()*this.gh),
+      progress:0, path:[], color:Math.random()<0.5?'#00e5ff':'#9900ff',
+    });
+  },
+  loop(){
+    const ctx=this.ctx;
+    if(!ctx){ return; }
+    const w=this.canvas.width, h=this.canvas.height;
+    if(!SAVE.data||!SAVE.data.settings||SAVE.data.settings.animBg===false){
+      ctx.fillStyle='#030305'; ctx.fillRect(0,0,w,h);
+    } else {
+      ctx.fillStyle='rgba(3,3,5,0.3)'; ctx.fillRect(0,0,w,h);
+      const cs=this.cs;
+      // draw grid lines
+      ctx.strokeStyle='rgba(30,30,60,0.6)'; ctx.lineWidth=1;
+      for(let y=0;y<this.gh;y++) for(let x=0;x<this.gw;x++){
+        const cell=this.cells[y][x];
+        const px=x*cs, py=y*cs;
+        if(cell.walls.E){ctx.beginPath();ctx.moveTo(px+cs,py);ctx.lineTo(px+cs,py+cs);ctx.stroke();}
+        if(cell.walls.S){ctx.beginPath();ctx.moveTo(px,py+cs);ctx.lineTo(px+cs,py+cs);ctx.stroke();}
+      }
+      // traces
+      if(Math.random()<0.02) this.addTrace();
+      this.traces=this.traces.filter(tr=>{
+        tr.progress+=0.8;
+        const n=Math.ceil(tr.progress);
+        ctx.strokeStyle=tr.color+'80'; ctx.lineWidth=2;
+        ctx.shadowColor=tr.color; ctx.shadowBlur=6;
+        for(let i=Math.max(0,n-8);i<Math.min(n,this.gw+this.gh);i++){
+          const px2=tr.x*cs+(i%this.gw)*2, py2=tr.y*cs+(i*3)%h;
+          ctx.beginPath(); ctx.arc(px2,py2,2,0,Math.PI*2); ctx.fill(); ctx.stroke();
+        }
+        ctx.shadowBlur=0;
+        return tr.progress<this.gw*3;
+      });
+      // particles
+      this.particles.forEach(p=>{
+        p.x+=p.vx; p.y+=p.vy;
+        if(p.x<0) p.x=w; if(p.x>w) p.x=0;
+        if(p.y<0) p.y=h; if(p.y>h) p.y=0;
+        ctx.fillStyle='rgba(0,229,255,'+p.alpha+')';
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fill();
+      });
+    }
+    requestAnimationFrame(()=>this.loop());
+  }
+};
+
+// ---- AUDIO ----
+const BGM = {
+  ctx:null, gainNode:null, playing:false,
+  init(){ try{this.ctx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){} },
+  playMenu(){ if(!this.ctx||this.playing) return; /* placeholder */ },
+  playSFX(type){
+    if(!this.ctx||!SAVE.data.settings.uiSounds) return;
+    try{
+      const o=this.ctx.createOscillator();
+      const g=this.ctx.createGain();
+      o.connect(g); g.connect(this.ctx.destination);
+      const vol=(SAVE.data.settings.sfxVol/100)*(SAVE.data.settings.masterVol/100)*0.2;
+      g.gain.setValueAtTime(vol,this.ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+0.3);
+      if(type==='coin'){o.frequency.setValueAtTime(880,this.ctx.currentTime);o.frequency.exponentialRampToValueAtTime(1200,this.ctx.currentTime+0.1);}
+      if(type==='diamond'){o.frequency.setValueAtTime(600,this.ctx.currentTime);o.frequency.setValueAtTime(900,this.ctx.currentTime+0.05);o.frequency.setValueAtTime(1400,this.ctx.currentTime+0.1);}
+      if(type==='damage'){o.type='sawtooth';o.frequency.setValueAtTime(200,this.ctx.currentTime);o.frequency.exponentialRampToValueAtTime(80,this.ctx.currentTime+0.3);}
+      if(type==='checkpoint'){o.type='sine';o.frequency.setValueAtTime(440,this.ctx.currentTime);o.frequency.setValueAtTime(660,this.ctx.currentTime+0.1);o.frequency.setValueAtTime(880,this.ctx.currentTime+0.2);}
+      o.start(); o.stop(this.ctx.currentTime+0.35);
+    }catch(e){}
+  }
+};
+
+// ---- MERCHANT ----
+const MERCHANT = {
+  types:[
+    {name:'WANDERER MERCHANT',desc:'A mysterious traveler with useful tools.',color:'#9900ff',
+     items:()=>[{icon:'🛡',name:'Shield Buff',desc:'Block one trap',cost:40,type:'coins',give:'shield'},
+      {icon:'🪙',name:'Coin Cache',desc:'Instantly +25 coins',cost:15,type:'coins',give:'coins25'},
+      {icon:'⚡',name:'Speed Boost',desc:'+Speed for 60s',cost:30,type:'coins',give:'speed60'}]},
+    {name:'DIAMOND DEALER',desc:'Rare items for those who seek power.',color:'#00aaff',
+     items:()=>[{icon:'💎',name:'Diamond Lens',desc:'+2 diamonds now',cost:80,type:'coins',give:'dia2'},
+      {icon:'🔮',name:'Luck Orb',desc:'+Treasure luck 30s',cost:3,type:'diamonds',give:'luckOrb'},
+      {icon:'🌟',name:'Star Chest',desc:'Random rare reward',cost:5,type:'diamonds',give:'starChest'}]},
+    {name:'CLOCK KEEPER',desc:'Bends time for the right price.',color:'#ff8800',
+     items:()=>[{icon:'❄',name:'Time Freeze',desc:'Pause traps 30s',cost:2,type:'diamonds',give:'freeze30'},
+      {icon:'⏱',name:'Timer Gift',desc:'Extra 2 min on record',cost:60,type:'coins',give:'timeBonus'},
+      {icon:'🔁',name:'Echo Step',desc:'Refund last move',cost:50,type:'coins',give:'echoStep'}]},
+    {name:'TREASURE BROKER',desc:'Risky trades, big payouts.',color:'#ffd700',
+     items:()=>[{icon:'📦',name:'Mystery Box',desc:'Random 1-100 coins',cost:30,type:'coins',give:'mystery'},
+      {icon:'💰',name:'Coin Flood',desc:'Instantly +60 coins',cost:3,type:'diamonds',give:'coins60'},
+      {icon:'🎰',name:'Lucky Roll',desc:'Double or nothing',cost:2,type:'diamonds',give:'gamble'}]},
+  ],
+  open(cell){
+    const t=this.types[Math.floor(Math.random()*this.types.length)];
+    const modal=document.getElementById('merchantModal');
+    document.getElementById('merchantName').textContent=t.name;
+    document.getElementById('merchantDesc').textContent=t.desc;
+    document.getElementById('merchantName').style.color=t.color;
+    const items=t.items();
+    document.getElementById('merchantItems').innerHTML=items.map((it,i)=>`
+      <div class="m-item" onclick="MERCHANT.buyItem(${i},'${it.give}',${it.cost},'${it.type}')">
+        <div class="mi-icon">${it.icon}</div>
+        <div class="mi-name">${it.name}</div>
+        <div class="mi-desc">${it.desc}</div>
+        <div class="mi-price ${it.type}">${it.type==='coins'?'🪙':'💎'} ${it.cost}</div>
+      </div>`).join('');
+    modal.classList.add('active'); modal.style.display='flex';
+    this._items=items;
+  },
+  buyItem(i,give,cost,type){
+    const it=this._items[i]; if(!it) return;
+    const bal=type==='coins'?PLAYER.coinsThisRun:PLAYER.diamondsThisRun;
+    if(bal<cost){ TOAST.show('⚠ NOT ENOUGH '+type.toUpperCase()); return; }
+    if(type==='coins') PLAYER.coinsThisRun-=cost;
+    else PLAYER.diamondsThisRun-=cost;
+    // apply effect
+    if(give==='shield') PLAYER.invShield=true;
+    if(give==='coins25') PLAYER._addCoins(25);
+    if(give==='coins60') PLAYER._addCoins(60);
+    if(give==='dia2') PLAYER._addDiamonds(2);
+    if(give==='speed60') PLAYER.boosts.push({type:'speed',name:'SPEED',icon:'⚡',time:60});
+    if(give==='luckOrb') PLAYER.boosts.push({type:'luck',name:'LUCK',icon:'🍀',time:30});
+    if(give==='freeze30') PLAYER.boosts.push({type:'freeze',name:'FREEZE',icon:'❄',time:30});
+    if(give==='mystery'){ const r=Math.ceil(Math.random()*100); PLAYER._addCoins(r); TOAST.show('📦 MYSTERY: +🪙'+r+'!'); }
+    if(give==='gamble'){ if(Math.random()<0.5) PLAYER._addCoins(Math.floor(cost*2)); else TOAST.show('🎰 BAD LUCK — LOST IT ALL!'); }
+    if(give==='starChest'){ PLAYER._addDiamonds(2+Math.floor(Math.random()*4)); }
+    TOAST.show('✔ PURCHASED: '+it.name);
+    HUD.update();
+  }
+};
+
+// ---- FPS ----
+const FPS = {
+  frames:0, last:Date.now(), current:0,
+  tick(){ this.frames++; const now=Date.now(); if(now-this.last>=1000){ this.current=this.frames; this.frames=0; this.last=now; if(SAVE.data.settings.fpsCounter) document.getElementById('fpsdisplay').textContent=this.current+' FPS'; } }
+};
+
+// ---- GAME STATE ----
+const STATE = {
+  running:false, paused:false,
+  currentFloor:1, damageCooldown:0,
+  lastFrameTime:0, accumulator:0,
+  rafId:null,
+};
+
+// ---- MAIN GAME CONTROLLER ----
+const GAME = {
+  canvas:null, ctx:null,
+  coinPopups:[],
+  shakeX:0, shakeY:0, shakeTime:0,
+
+  init(){
+    SAVE.load();
+    QUESTS.load();
+    TOAST.init();
+    BGM.init();
+    BGANIM.init();
+    MINIMAP.init();
+    INPUT.init();
+    SCREENS.show('mainMenu');
+    updateMainMenuStats();
+    SETTINGS.init();
+    QUESTS.render();
+    this.canvas = document.getElementById('gameCanvas');
+    this.ctx = this.canvas.getContext('2d');
+    this._resizeCanvas();
+    window.addEventListener('resize',()=>this._resizeCanvas());
+  },
+  _resizeCanvas(){
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+  },
+
+  newRun(){
+    SCREENS.hideAll();
+    SAVE.data.totalRuns = (SAVE.data.totalRuns||0)+1;
+    MAZE.grid=[]; MAZE.width=0; MAZE.height=0;
+    MAZE.generate(CFG.MAZE_W, CFG.MAZE_H);
+    PLAYER.init();
+    STATE.running=true; STATE.paused=false; STATE.currentFloor=1;
+    STATE.damageCooldown=0;
+    QUESTS.list.forEach(q=>{ if(q.type==='floorRun'||q.type==='runTime'||q.type==='noDmgTime'||q.type==='treasureRunRooms'||q.type==='noCkptRun') { QUESTS.progress[q.id].progress=0; } });
+    HUD.show();
+    HUD.applySettings();
+    HUD.update();
+    HUD.updateQuests();
+    MINIMAP.update();
+    document.getElementById('gameCanvas').style.display='block';
+    BGM.playSFX('checkpoint');
+    this._startLoop();
+  },
+  continueRun(){
+    const ckpts = SAVE.data.checkpoints||[];
+    if(!ckpts.length){ this.newRun(); return; }
+    this.loadFromCheckpoint(ckpts[0]);
+  },
+  loadFromCheckpoint(ckpt){
+    SCREENS.hideAll();
+    MAZE.grid=[]; MAZE.width=0; MAZE.height=0;
+    const w = Math.max(CFG.MAZE_W, ckpt.x+CFG.EXTEND_BY);
+    MAZE.generate(w, CFG.MAZE_H);
+    PLAYER.init();
+    PLAYER.x=ckpt.x; PLAYER.y=ckpt.y;
+    PLAYER.px=PLAYER.x; PLAYER.py=PLAYER.y;
+    PLAYER.checkpointX=ckpt.x; PLAYER.checkpointY=ckpt.y;
+    PLAYER.coinsThisRun=ckpt.runCoins||0;
+    STATE.currentFloor=ckpt.floor||1;
+    STATE.running=true; STATE.paused=false;
+    MAZE.grid[PLAYER.y][PLAYER.x].explored=true;
+    HUD.show(); HUD.applySettings(); HUD.update(); HUD.updateQuests();
+    document.getElementById('gameCanvas').style.display='block';
+    TOAST.show('🚩 LOADED FROM CHECKPOINT — FLOOR '+STATE.currentFloor);
+    this._startLoop();
+  },
+  continueFromCheckpoint(){
+    document.getElementById('resultsScreen').classList.remove('active');
+    document.getElementById('resultsScreen').style.display='none';
+    this.continueRun();
+  },
+  _startLoop(){
+    if(STATE.rafId) cancelAnimationFrame(STATE.rafId);
+    STATE.lastFrameTime = performance.now();
+    const loop = (now) => {
+      if(!STATE.running){ return; }
+      STATE.rafId = requestAnimationFrame(loop);
+      const dt = Math.min(100, now-STATE.lastFrameTime);
+      STATE.lastFrameTime = now;
+      if(!STATE.paused){ this._update(dt); }
+      this._render();
+      FPS.tick();
+    };
+    STATE.rafId = requestAnimationFrame(loop);
+  },
+  _update(dt){
+    PLAYER.update(dt);
+    PARTICLES.update(dt);
+    // mist damage
+    const cell=MAZE.cell(PLAYER.x,PLAYER.y);
+    if(cell&&cell.type==='trap'&&cell.trap&&cell.trap.type==='mist'){
+      STATE._mistTimer=(STATE._mistTimer||0)+dt;
+      if(STATE._mistTimer>1500){ STATE._mistTimer=0; PLAYER.takeDamage(1,'mist'); }
+    } else { STATE._mistTimer=0; }
+    // coin popups
+    this.coinPopups=this.coinPopups.filter(p=>{ p.life-=dt/800; return p.life>0; });
+    // shake
+    if(this.shakeTime>0){ this.shakeTime-=dt; this.shakeX=(Math.random()-0.5)*6; this.shakeY=(Math.random()-0.5)*6; }
+    else { this.shakeX=0; this.shakeY=0; }
+    // quest: no-damage run
+    if(!PLAYER.trapsHit&&PLAYER.runTime>10) QUESTS.setProgress('noCkptRun',0);
+  },
+  _render(){
+    const ctx=this.ctx;
+    ctx.save();
+    ctx.translate(this.shakeX, this.shakeY);
+    RENDERER.draw(ctx, this.canvas);
+    ctx.restore();
+    // coin popups
+    this.coinPopups.forEach(p=>{
+      ctx.globalAlpha=p.life;
+      ctx.fillStyle='#ffd700';
+      ctx.font='bold 14px Orbitron,monospace';
+      ctx.textAlign='center';
+      ctx.fillText('+'+p.val, p.x, p.y - (1-p.life)*40);
+      ctx.globalAlpha=1;
+    });
+  },
+  pause(){
+    STATE.paused=true;
+    const pm=document.getElementById('pauseMenu');
+    pm.classList.add('active'); pm.style.display='flex';
+    // update pause stats
+    const t=PLAYER.runTime;
+    const m=Math.floor(t/60), s=Math.floor(t%60);
+    document.getElementById('pstatTime').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    document.getElementById('pstatFloor').textContent=STATE.currentFloor;
+    document.getElementById('pstatCoins').textContent='🪙 '+PLAYER.coinsThisRun;
+    document.getElementById('pstatDiamonds').textContent='💎 '+PLAYER.diamondsThisRun;
+    document.getElementById('pstatRooms').textContent=PLAYER.roomsCleared;
+    document.getElementById('pstatTraps').textContent=PLAYER.trapsHit;
+  },
+  resume(){
+    STATE.paused=false;
+    const pm=document.getElementById('pauseMenu');
+    pm.classList.remove('active'); pm.style.display='none';
+    document.getElementById('merchantModal').classList.remove('active'); document.getElementById('merchantModal').style.display='none';
+  },
+  pauseOpenQuests(){ SCREENS.show('questScreen'); },
+  pauseOpenInventory(){ TOAST.show('🎒 Inventory: '+PLAYER.invRevive+' Revive'+(PLAYER.invShield?' | 🛡 Shield':'')); },
+  pauseOpenSettings(){ SCREENS.show('settingsScreen'); },
+  saveNow(){
+    SAVE.data.coins+=PLAYER.coinsThisRun; PLAYER.coinsThisRun=0;
+    SAVE.data.diamonds+=PLAYER.diamondsThisRun; PLAYER.diamondsThisRun=0;
+    SAVE.save();
+    TOAST.show('💾 PROGRESS SAVED');
+  },
+  returnToCheckpoint(){
+    this.resume();
+    PLAYER.x=PLAYER.checkpointX; PLAYER.y=PLAYER.checkpointY;
+    PLAYER.px=PLAYER.x; PLAYER.py=PLAYER.y;
+    PLAYER.hp=Math.min(PLAYER.maxHp, PLAYER.hp+1);
+    TOAST.show('🚩 RETURNED TO CHECKPOINT');
+  },
+  returnToMenu(){
+    this.resume();
+    this._endRun('escape');
+  },
+  playerDied(){
+    SAVE.data.totalDeaths=(SAVE.data.totalDeaths||0)+1;
+    if(PLAYER.invRevive>0){
+      PLAYER.invRevive--; PLAYER.hp=2;
+      TOAST.show('💊 REVIVED! 2 HP RESTORED');
+      return;
+    }
+    this._endRun('death');
+  },
+  _endRun(reason){
+    if(STATE.rafId) cancelAnimationFrame(STATE.rafId);
+    STATE.running=false;
+    HUD.hide();
+    document.getElementById('gameCanvas').style.display='none';
+    // commit earnings
+    SAVE.data.coins+=PLAYER.coinsThisRun;
+    SAVE.data.diamonds+=PLAYER.diamondsThisRun;
+    SAVE.data.totalPlaytime=(SAVE.data.totalPlaytime||0)+PLAYER.runTime;
+    if(PLAYER.runTime>SAVE.data.bestSurvivalTime) SAVE.data.bestSurvivalTime=PLAYER.runTime;
+    QUESTS.setProgress('escapeCoins', PLAYER.coinsThisRun+(SAVE.data.coinsLifetime||0));
+    QUESTS.setProgress('totalRuns', SAVE.data.totalRuns);
+    SAVE.save();
+    this._showResults(reason);
+  },
+  _showResults(reason){
+    const records=[];
+    document.getElementById('resultsTitle').textContent = reason==='death'?'💀 YOU DIED': reason==='escape'?'🚪 RUN ENDED':'✔ RUN COMPLETE';
+    document.getElementById('resultsSubtitle').textContent = '— FLOOR '+STATE.currentFloor+' REPORT —';
+    const t=PLAYER.runTime;
+    const m=Math.floor(t/60), s=Math.floor(t%60);
+    const stats=[
+      {val:`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`,label:'RUN TIME',cls:''},
+      {val:STATE.currentFloor,label:'MAX FLOOR',cls:''},
+      {val:'🪙 '+PLAYER.coinsThisRun,label:'COINS EARNED',cls:'gold'},
+      {val:'💎 '+PLAYER.diamondsThisRun,label:'DIAMONDS',cls:''},
+      {val:PLAYER.roomsCleared,label:'ROOMS CLEARED',cls:'purple'},
+      {val:PLAYER.trapsHit,label:'TRAPS HIT',cls:''},
+    ];
+    document.getElementById('resultsStats').innerHTML=stats.map(s=>`<div class="r-stat"><div class="r-val ${s.cls}">${s.val}</div><div class="r-label">${s.label}</div></div>`).join('');
+    if(STATE.currentFloor>=(SAVE.data.bestFloor||0)) records.push('New Deepest Floor: '+STATE.currentFloor);
+    if(PLAYER.runTime>=(SAVE.data.bestSurvivalTime||0)-PLAYER.runTime) records.push('New Best Run Time!');
+    const recEl=document.getElementById('resultsRecords');
+    if(records.length){ recEl.style.display='block'; document.getElementById('resultsRecordsList').innerHTML=records.map(r=>`<div class="new-record">${r}</div>`).join(''); }
+    else recEl.style.display='none';
+    const rs=document.getElementById('resultsScreen');
+    rs.style.display='flex'; rs.classList.add('active');
+  },
+  openMerchant(cell){
+    MERCHANT.open(cell);
+    STATE.paused=true;
+  },
+  closeMerchant(){
+    document.getElementById('merchantModal').classList.remove('active');
+    document.getElementById('merchantModal').style.display='none';
+    STATE.paused=false;
+  },
+  flashDamage(){
+    const el=document.getElementById('damageFlash');
+    const intensity=SAVE.data.settings.flashIntensity;
+    el.style.opacity=intensity==='High'?'0.5':intensity==='Low'?'0.15':'0.3';
+    setTimeout(()=>el.style.opacity='0',150);
+    BGM.playSFX('damage');
+  },
+  shakeScreen(){
+    this.shakeTime=200;
+  },
+  showDmgNumber(n){
+    const el=document.createElement('div');
+    el.className='coin-popup';
+    el.style.color='#ff2244';
+    el.textContent='-'+n+'HP';
+    el.style.left=(PLAYER.px*CFG.CELL-CAM.x+CFG.CELL/2)+'px';
+    el.style.top=(PLAYER.py*CFG.CELL-CAM.y)+'px';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(), 800);
+  },
+  spawnCoinPopup(n){
+    const el=document.createElement('div');
+    el.className='coin-popup';
+    el.textContent='+🪙'+n;
+    el.style.left=(PLAYER.px*CFG.CELL-CAM.x+CFG.CELL/2+(-10+Math.random()*20))+'px';
+    el.style.top=(PLAYER.py*CFG.CELL-CAM.y-10)+'px';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(), 800);
+    BGM.playSFX('coin');
+  },
+};
+
+// ---- HELPERS ----
+function updateMainMenuStats(){
+  if(!SAVE.data) return;
+  const fmt=n=>n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':n;
+  document.getElementById('mmCoins').textContent='🪙 '+fmt(SAVE.data.coins||0);
+  document.getElementById('mmDiamonds').textContent='💎 '+(SAVE.data.diamonds||0);
+  document.getElementById('mmFloor').textContent=SAVE.data.bestFloor||'—';
+  document.getElementById('mmRuns').textContent=SAVE.data.totalRuns||0;
+}
+
+function renderCheckpointLoad(){
+  const ckpts=SAVE.data.checkpoints||[];
+  const el=document.getElementById('checkpointOptions'); if(!el) return;
+  const options=[
+    {icon:'🚩',name:'Last Checkpoint',desc:ckpts.length?`Floor ${ckpts[0].floor} — ${new Date(ckpts[0].time).toLocaleTimeString()}`:'No checkpoint saved',action:()=>{ if(ckpts.length) GAME.loadFromCheckpoint(ckpts[0]); else TOAST.show('⚠ NO CHECKPOINT FOUND'); }},
+    {icon:'⚡',name:'New Run',desc:'Start from the very beginning',action:()=>GAME.newRun()},
+    ...ckpts.slice(0,4).map((c,i)=>({icon:'📍',name:`Checkpoint ${i+1}`,desc:`Floor ${c.floor} — ${new Date(c.time).toLocaleString()}`,action:()=>GAME.loadFromCheckpoint(c)})),
+  ];
+  el.innerHTML='';
+  options.forEach(o=>{
+    const div=document.createElement('div');
+    div.className='ckpt-option';
+    div.innerHTML=`<div class="icon">${o.icon}</div><div class="info"><div class="name">${o.name}</div><div class="desc">${o.desc}</div></div>`;
+    div.onclick=o.action;
+    el.appendChild(div);
+  });
+}
+
+// ---- BOOT ----
+window.addEventListener('load',()=>{
+  document.addEventListener('dragstart',e=>e.preventDefault());
+  document.addEventListener('selectstart',e=>e.preventDefault());
+  document.addEventListener('contextmenu',e=>e.preventDefault());
+  GAME.init();
+});
+</script>
+</body>
+</html>
