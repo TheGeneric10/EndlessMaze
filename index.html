@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>ENDLESS MAZE v0.26.10</title>
+<title>ENDLESS MAZE v0.26.30</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&display=swap');
 *{margin:0;padding:0;box-sizing:border-box;-webkit-user-select:none;-moz-user-select:none;user-select:none;-webkit-user-drag:none;}
@@ -54,6 +54,16 @@ canvas{display:block;}
 @keyframes logoPulse{0%,100%{text-shadow:var(--glow-c);}50%{text-shadow:0 0 15px #00e5ff,0 0 40px rgba(0,229,255,0.7),0 0 80px rgba(0,229,255,0.3);}}
 
 .mm-stats-row{display:flex;gap:8px;margin-bottom:8px;width:100%;}
+.mm-account{width:100%;display:flex;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--border2);padding:8px 10px;border-radius:4px;margin-bottom:8px;gap:8px;}
+.mm-account .name{font-family:var(--font-t);font-size:11px;color:var(--white);letter-spacing:1px;}
+.mm-account .name .tag{margin-left:4px;font-size:9px;color:var(--gold);}
+.mm-account .meta{font-size:9px;color:var(--dim);}
+.auth-card{background:var(--panel);border:1px solid var(--border2);border-radius:6px;padding:16px;margin-bottom:12px;}
+.auth-card h3{font-family:var(--font-t);font-size:12px;color:var(--cyan);letter-spacing:2px;margin-bottom:10px;}
+.auth-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+.auth-in{flex:1;min-width:180px;background:var(--panel2);border:1px solid var(--border2);color:var(--white);padding:10px;border-radius:4px;}
+.social-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
 .mm-stat{flex:1;background:var(--panel);border:1px solid var(--border2);padding:8px 10px;
   border-radius:4px;text-align:center;}
 .mm-stat .label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;}
@@ -295,10 +305,12 @@ canvas{display:block;}
   font-size:9px;padding:2px 7px;border-radius:3px;letter-spacing:1px;}
 
 /* MOBILE CONTROLS */
-#mobileControls{display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+#mobileControls{display:none;position:fixed;bottom:22px;left:18px;transform:none;
   z-index:150;pointer-events:all;}
-@media(max-width:700px){#mobileControls{display:grid;grid-template-columns:repeat(3,48px);
+@media(max-width:900px){#mobileControls{display:grid;grid-template-columns:repeat(3,48px);
   grid-template-rows:repeat(3,48px);gap:4px;}}
+@media(min-width:901px){html.touch #mobileControls{display:grid;}}
+@media(max-width:900px){.hud-br{bottom:170px;right:8px;max-width:150px;} .hud-quests{max-width:150px;} .hud-tl{left:8px;top:8px;}}
 .dpad-btn{background:rgba(5,5,10,0.8);border:1px solid var(--border2);border-radius:6px;
   color:var(--cyan);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;
   active-bg:rgba(0,229,255,0.2);}
@@ -349,6 +361,16 @@ canvas{display:block;}
 #damageFlash{position:fixed;inset:0;z-index:600;pointer-events:none;
   background:rgba(255,34,68,0.25);opacity:0;transition:opacity 0.1s;}
 
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:none;align-items:center;justify-content:center;z-index:1200;}
+.confirm-overlay.active{display:flex;}
+.confirm-box{width:min(92vw,430px);background:var(--panel2);border:1px solid var(--cyan2);border-radius:8px;padding:16px;transform:translateY(40px);opacity:0;transition:all .25s ease;box-shadow:0 12px 30px rgba(0,0,0,.45);}
+.confirm-overlay.active .confirm-box{transform:translateY(0);opacity:1;}
+.confirm-title{font-family:var(--font-t);letter-spacing:2px;color:var(--cyan);font-size:12px;margin-bottom:8px;}
+.confirm-msg{color:var(--white);font-size:12px;line-height:1.5;margin-bottom:10px;}
+.confirm-input{width:100%;background:var(--panel);color:var(--white);border:1px solid var(--border);padding:8px;border-radius:4px;margin-bottom:12px;}
+.daily-board{margin-top:10px;padding:10px;background:rgba(0,0,0,.25);border:1px solid var(--border2);border-radius:6px;}
+.daily-split{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:10px;}
+.daily-split ul{margin:6px 0 0 14px;padding:0;max-height:100px;overflow:auto;}
 /* SCROLL FIX for overlay screens */
 .overlay-screen{overflow-y:auto;padding-bottom:24px;}
 </style>
@@ -373,6 +395,7 @@ canvas{display:block;}
     <div class="hud-panel hud-coins" id="hudCoins">🪙 0</div>
     <div class="hud-panel hud-diamonds" id="hudDiamonds">💎 0</div>
     <div class="hud-panel hud-floor" id="hudFloor">FLOOR 1</div>
+    <div class="hud-panel" id="hudKeys">🗝 0</div>
     <div class="hud-floor-progress" id="hudFloorProgress"><div class="hud-floor-label" id="hudFloorLabel">NEXT FLOOR 0%</div><div class="hud-floor-track"><div class="hud-floor-fill" id="hudFloorFill"></div></div></div>
   </div>
   <div class="hud-tr">
@@ -453,8 +476,9 @@ canvas{display:block;}
     <div class="mm-logo">
       <h1>ENDLESS<br>MAZE</h1>
       <div class="sub">EXPLORE · SURVIVE · ESCAPE</div>
-      <div class="ver">v0.26.10 — ARCADE EDITION</div>
+      <div class="ver">v0.26.30 — CONNECTED EDITION</div>
     </div>
+    <div class="mm-account"><div><div class="name" id="accountName">Guest <span class="tag" id="accountBadge"></span></div><div class="meta" id="accountMeta">SIGN IN TO SAVE PROGRESS AND CONNECT WITH FRIENDS FOR FREE!</div></div><button class="mm-btn" style="width:auto;padding:8px 10px;text-align:center;" onclick="AUTH.open()">ACCOUNT</button></div>
     <div class="mm-stats-row">
       <div class="mm-stat"><div class="label">Coins</div><div class="val" id="mmCoins">0</div></div>
       <div class="mm-stat"><div class="label">Diamonds</div><div class="val" id="mmDiamonds">0</div></div>
@@ -565,8 +589,7 @@ canvas{display:block;}
     <div class="stab-panel" id="stab-savedata">
       <div class="save-info" id="saveInfo"></div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                <button class="s-btn" onclick="SAVE.exportSave()">📤 EXPORT</button>
-        <button class="s-btn" onclick="SAVE.importSave()">📥 IMPORT</button>
+                <button class="s-btn" onclick="AUTH.open()">🔐 SIGN IN TO SAVE PROGRESS & CONNECT WITH FRIENDS</button>
         <button class="s-btn" style="color:var(--red);border-color:var(--red2);" onclick="SAVE.resetProgress()">⚠ RESET PROGRESS</button>
       </div>
     </div>
@@ -585,6 +608,15 @@ canvas{display:block;}
     <div style="height:12px;"></div>
     <div class="quest-pinned-header">ALL QUESTS</div>
     <div id="allQuestList"></div>
+    <div class="daily-board">
+      <div class="quest-pinned-header">⏱ ROTATING BOARD (EVERY 8 HOURS)</div>
+      <div id="dailyRotationMeta" style="font-size:10px;color:var(--dim);margin-bottom:6px;"></div>
+      <div class="daily-split">
+        <div><b>Quests</b><ul id="dailyQuestList"></ul></div>
+        <div><b>Missions</b><ul id="dailyMissionList"></ul></div>
+        <div><b>Challenges</b><ul id="dailyChallengeList"></ul></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -645,6 +677,7 @@ canvas{display:block;}
       <div class="htp-row"><div class="htp-key">🚩 CHECKPOINT</div><div class="htp-txt">Glowing green rooms. Walk in to save your position in the maze.</div></div>
       <div class="htp-row"><div class="htp-key">💜 MERCHANT</div><div class="htp-txt">Purple rooms. Buy items mid-run using your collected coins.</div></div>
       <div class="htp-row"><div class="htp-key">🏆 TREASURE</div><div class="htp-txt">Gold-lit rooms with extra chests and diamonds.</div></div>
+      <div class="htp-row"><div class="htp-key">🗝 LOCKED WALL</div><div class="htp-txt">Higher floors can spawn locked walls. Find keys to unlock and continue deeper.</div></div>
       <div class="htp-row"><div class="htp-key">💙 SAFE ROOM</div><div class="htp-txt">Blue rooms. No traps. Can restore 1 HP.</div></div>
     </div>
     <div class="htp-section">
@@ -655,7 +688,7 @@ canvas{display:block;}
     </div>
     <div class="htp-section">
       <h3>CHECKPOINTS & SAVES</h3>
-      <div class="htp-txt" style="line-height:1.8;font-size:12px;">The game auto-saves locally as you play and at checkpoints. There is no manual save/load button — just continue, use checkpoint load, or start a fresh run. Progress like coins, upgrades, and quests is always preserved between sessions.</div>
+      <div class="htp-txt" style="line-height:1.8;font-size:12px;">Progress is synced to your account when signed in. Continue and checkpoint keep your run status, while coins, diamonds, upgrades, and quests persist with encrypted profile sync.</div>
     </div>
     <div class="htp-section">
       <h3>QUESTS & PINNING</h3>
@@ -670,6 +703,51 @@ canvas{display:block;}
   </div>
 </div>
 
+
+<div class="screen overlay-screen" id="authScreen" style="display:none;">
+  <div class="screen-header">
+    <h2>🔐 ACCOUNT HUB</h2>
+    <button class="screen-back" onclick="SCREENS.back()">◀ BACK</button>
+  </div>
+  <div class="screen-body">
+    <div class="auth-card">
+      <h3>SIGN IN / SIGN UP / GUEST</h3>
+      <form id="authForm" onsubmit="event.preventDefault();AUTH.signIn();">
+        <div class="auth-row"><input id="authEmail" class="auth-in" type="email" autocomplete="email" placeholder="Email"><input id="authPass" class="auth-in" type="password" autocomplete="current-password" placeholder="Password"></div>
+        <div class="auth-row"><input id="authUser" class="auth-in" autocomplete="username" placeholder="Username"></div>
+        <div class="auth-row">
+          <button class="mm-btn" type="submit">SIGN IN</button>
+          <button class="mm-btn" type="button" onclick="AUTH.signUp()">SIGN UP</button>
+          <button class="mm-btn" type="button" onclick="AUTH.google()">GOOGLE</button>
+          <button class="mm-btn" type="button" onclick="AUTH.guest()">GUEST</button>
+        </div>
+      </form>
+      <div class="meta">By continuing you agree to Terms & Privacy. More games: https://thegeneric10.github.io</div>
+    </div>
+    <div class="auth-card">
+      <h3>PUBLIC PROFILE</h3>
+      <div class="social-grid">
+        <button class="mm-btn" onclick="AUTH.changeUsername()">Change Username</button>
+        <button class="mm-btn" onclick="AUTH.deleteAccount()">Delete Account</button>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--dim);" id="socialCounts">Account flags: verified=false | admin=false</div>
+    </div>
+  </div>
+</div>
+
+
+<div id="confirmOverlay" class="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirmTitle">CONFIRM</div>
+    <div class="confirm-msg" id="confirmMsg"></div>
+    <input id="confirmInput" class="confirm-input" style="display:none;" />
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="mm-btn" onclick="UI_CONFIRM.no()">CANCEL</button>
+      <button class="mm-btn" onclick="UI_CONFIRM.yes()" id="confirmYesBtn">CONFIRM</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== CREDITS ===== -->
 <div class="screen overlay-screen" id="creditsScreen" style="display:none;">
   <div class="screen-header">
@@ -679,7 +757,7 @@ canvas{display:block;}
   <div class="screen-body">
     <div class="credits-section">
       <div class="title-big">ENDLESS MAZE</div>
-      <div style="color:var(--gold);font-family:var(--font-t);letter-spacing:3px;margin-bottom:24px;">v0.26.10 — ARCADE EDITION</div>
+      <div style="color:var(--gold);font-family:var(--font-t);letter-spacing:3px;margin-bottom:24px;">v0.26.30 — CONNECTED EDITION</div>
       <div style="color:var(--cyan);font-family:var(--font-t);font-size:11px;letter-spacing:2px;margin-bottom:6px;">DESIGN & DEVELOPMENT</div>
       <div>Procedural Maze Engine</div>
       <div>Particle System</div>
@@ -711,12 +789,12 @@ canvas{display:block;}
 
 <script>
 // ============================================================
-// ENDLESS MAZE v0.26.10 — GAME ENGINE
+// ENDLESS MAZE v0.26.30 — GAME ENGINE
 // ============================================================
 
 // ---- CONFIG ----
 const CFG = {
-  VERSION:'v0.26.10',
+  VERSION:'v0.26.30',
   CELL:48,       // px per maze cell
   MAZE_W:60,     // initial maze width in cells
   MAZE_H:15,     // maze height in cells
@@ -763,6 +841,9 @@ const SAVE = {
       quests:QUESTS.defaults(),
       pinnedQuests:['q_coin1','q_deep1','q_trap1'],
       checkpoints:[],
+      profile:{signedIn:false,guest:true,email:'',username:'Guest',badge:'none',verified:false,admin:false,usernameChanges:0,lastUsernameChange:0,authProvider:'guest'},
+      cloudBlob:'',
+      claimedCells:{},
       lastSave:null,
     };
   },
@@ -783,42 +864,18 @@ const SAVE = {
       this.data.lastSave = Date.now();
       localStorage.setItem(this.KEY, JSON.stringify(this.data));
     }catch(e){}
+    if(window.AUTH && this.data && this.data.profile && this.data.profile.signedIn){ AUTH.syncToCloud(); }
   },
-  exportSave(){
-    const s = JSON.stringify(this.data);
-    const b = btoa(s);
-    const el = document.createElement('a');
-    el.href='data:text/plain;base64,'+b;
-    el.download='endlessmaze_save.em';
-    el.click();
-    TOAST.show('✔ SAVE EXPORTED');
-  },
-  importSave(){
-    const inp = document.createElement('input');
-    inp.type='file'; inp.accept='.em,.txt';
-    inp.onchange = e => {
-      const f = e.target.files[0];
-      if(!f) return;
-      const r = new FileReader();
-      r.onload = ev => {
-        try{
-          const s = atob(ev.target.result.trim());
-          this.data = JSON.parse(s);
-          this.save();
-          TOAST.show('✔ SAVE IMPORTED');
-          updateMainMenuStats();
-        }catch{ TOAST.show('✖ IMPORT FAILED'); }
-      };
-      r.readAsText(f);
-    };
-    inp.click();
-  },
+  exportSave(){ TOAST.show('SIGN IN TO SYNC PROGRESS'); },
+  importSave(){ TOAST.show('SIGN IN TO SYNC PROGRESS'); },
   resetProgress(){
-    if(!confirm('RESET ALL PROGRESS? This cannot be undone.')) return;
-    this.data = this.defaults();
-    this.save();
-    TOAST.show('✔ PROGRESS RESET');
-    updateMainMenuStats();
+    UI_CONFIRM.ask({title:'RESET PROGRESS',message:'RESET ALL PROGRESS? This cannot be undone.'}).then(ok=>{
+      if(!ok) return;
+      this.data = this.defaults();
+      this.save();
+      TOAST.show('✔ PROGRESS RESET');
+      updateMainMenuStats();
+    });
   },
 };
 
@@ -834,11 +891,241 @@ const TOAST = {
   }
 };
 
+
+
+const UI_CONFIRM = {
+  resolver:null,
+  init(){ this.el=document.getElementById('confirmOverlay'); },
+  ask({title='CONFIRM',message='',requireText=''}){
+    if(!this.el) this.init();
+    const t=document.getElementById('confirmTitle');
+    const m=document.getElementById('confirmMsg');
+    const i=document.getElementById('confirmInput');
+    if(t) t.textContent=title;
+    if(m) m.textContent=message;
+    if(i){
+      i.value='';
+      i.style.display=requireText?'block':'none';
+      i.placeholder=requireText?`Type ${requireText} to confirm`:'';
+      i.dataset.require=requireText||'';
+    }
+    this.el.classList.add('active');
+    return new Promise(res=>{ this.resolver=res; });
+  },
+  yes(){
+    const i=document.getElementById('confirmInput');
+    if(i && i.style.display!=='none' && (i.value||'').trim()!==i.dataset.require){ TOAST.show('TYPE CONFIRM TEXT EXACTLY'); return; }
+    this.close(true);
+  },
+  no(){ this.close(false); },
+  close(v){
+    if(this.el) this.el.classList.remove('active');
+    const r=this.resolver; this.resolver=null;
+    if(r) r(!!v);
+  }
+};
+
+const AUTH = {
+  firebaseConfig:{
+    apiKey:"AIzaSyA375t6p_Zc9Ztfi-RUniqAmjttsjPyy1k",
+    authDomain:"thegeneric-685b0.firebaseapp.com",
+    databaseURL:"https://thegeneric-685b0-default-rtdb.firebaseio.com",
+    projectId:"thegeneric-685b0",
+    storageBucket:"thegeneric-685b0.firebasestorage.app",
+    messagingSenderId:"272113167212",
+    appId:"1:272113167212:web:7d562f3b694a82bf292149",
+    measurementId:"G-J77YCHHSWF"
+  },
+  fb:null,
+  _initPromise:null,
+  open(){ SCREENS.show('authScreen'); this.render(); },
+  init(){ this.render(); this.initFirebase(); },
+  initFirebase(){
+    if(this._initPromise) return this._initPromise;
+    this._initPromise = import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js').then(async ({initializeApp})=>{
+      const authMod = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js');
+      const dbMod = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js');
+      const app = initializeApp(this.firebaseConfig);
+      const auth = authMod.getAuth(app);
+      const db = dbMod.getDatabase(app);
+      const provider = new authMod.GoogleAuthProvider();
+      this.fb = {app,auth,db,provider,authMod,dbMod};
+      authMod.onAuthStateChanged(auth, user=>{
+        if(user) this._onFirebaseUser(user);
+      });
+      return this.fb;
+    }).catch(()=>{
+      TOAST.show('ACCOUNT SERVICE UNAVAILABLE');
+      return null;
+    });
+    return this._initPromise;
+  },
+  async _ensureFirebase(){
+    if(this.fb) return true;
+    const fb = await this.initFirebase();
+    return !!fb;
+  },
+  _read(){
+    const email=(document.getElementById('authEmail')||{}).value||'';
+    const pass=(document.getElementById('authPass')||{}).value||'';
+    const user=(document.getElementById('authUser')||{}).value||'';
+    return {email:email.trim(), pass:pass.trim(), user:user.trim()};
+  },
+  _secureBlob(payload){
+    return btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).split('').reverse().join('');
+  },
+  _uidPath(uid){
+    return `EndlessMaze/users/${uid}`;
+  },
+  async _onFirebaseUser(user){
+    if(!await this._ensureFirebase()) return;
+    const {db,dbMod} = this.fb;
+    const uidPath = this._uidPath(user.uid);
+    const snap = await dbMod.get(dbMod.ref(db, uidPath));
+    const remote = snap.exists() ? (snap.val()||{}) : {};
+    const remoteProfile = remote.profile||{};
+        SAVE.data.profile={
+      ...SAVE.data.profile,
+      ...remoteProfile,
+      signedIn:true,
+      guest:false,
+      uid:user.uid,
+      email:user.email||'',
+      username:remoteProfile.username||user.displayName||SAVE.data.profile.username||'Player',
+      verified:!!remoteProfile.verified,
+      admin:!!remoteProfile.admin,
+      authProvider:(user.providerData&&user.providerData[0]&&user.providerData[0].providerId)||'password'
+    };
+    await this.syncToCloud();
+    SAVE.save();
+    this.render();
+    updateMainMenuStats();
+  },
+  async syncToCloud(){
+    if(!SAVE.data.profile.signedIn || !SAVE.data.profile.uid) return;
+    if(!await this._ensureFirebase()) return;
+    const {db,dbMod} = this.fb;
+    const uid = SAVE.data.profile.uid;
+    const payload={
+      profile:SAVE.data.profile,
+      stats:{coins:SAVE.data.coins||0,diamonds:SAVE.data.diamonds||0,bestFloor:SAVE.data.bestFloor||0,totalRuns:SAVE.data.totalRuns||0},
+      updated:Date.now()
+    };
+    SAVE.data.cloudBlob=this._secureBlob(payload);
+    const safeUsername=(SAVE.data.profile.username||'Player').slice(0,24);
+    await dbMod.set(dbMod.ref(db,this._uidPath(uid)),{
+      encrypted:SAVE.data.cloudBlob,
+      profile:{
+        username:safeUsername,
+        email:SAVE.data.profile.email||'',
+        badge:SAVE.data.profile.badge||'none',
+        verified:!!SAVE.data.profile.verified,
+        admin:!!SAVE.data.profile.admin,
+        usernameChanges:SAVE.data.profile.usernameChanges||0,
+        lastUsernameChange:SAVE.data.profile.lastUsernameChange||0,
+        authProvider:SAVE.data.profile.authProvider||'password'
+      },
+      stats:payload.stats,
+      updatedAt:dbMod.serverTimestamp()
+    });
+    SAVE.save();
+  },
+  async signUp(){
+    const {email,pass,user}=this._read();
+    if(!email||!pass||!user){ TOAST.show('ENTER EMAIL, PASSWORD, USERNAME'); return; }
+    if(!await this._ensureFirebase()) return;
+    const {auth,authMod} = this.fb;
+    try{
+      const cred = await authMod.createUserWithEmailAndPassword(auth,email,pass);
+      await authMod.updateProfile(cred.user,{displayName:user});
+      await this._onFirebaseUser(cred.user);
+      SAVE.data.profile={...SAVE.data.profile,username:user,authProvider:'password',verified:false,admin:false,badge:'none'};
+      await this.syncToCloud();
+      SCREENS.show('mainMenu');
+      TOAST.show('ACCOUNT CREATED');
+    }catch(e){ TOAST.show((e&&e.code?e.code:'SIGN UP FAILED').replace('auth/','').replaceAll('-',' ').toUpperCase()); }
+  },
+  async signIn(){
+    const {email,pass}=this._read();
+    if(!email||!pass){ TOAST.show('ENTER EMAIL AND PASSWORD'); return; }
+    if(!await this._ensureFirebase()) return;
+    const {auth,authMod} = this.fb;
+    try{
+      const cred = await authMod.signInWithEmailAndPassword(auth,email,pass);
+      await this._onFirebaseUser(cred.user);
+      SCREENS.show('mainMenu');
+      TOAST.show('SIGNED IN');
+    }catch(e){ TOAST.show((e&&e.code?e.code:'SIGN IN FAILED').replace('auth/','').replaceAll('-',' ').toUpperCase()); }
+  },
+  async google(){
+    if(!await this._ensureFirebase()) return;
+    const {auth,authMod,provider} = this.fb;
+    try{
+      const cred = await authMod.signInWithPopup(auth,provider);
+      await this._onFirebaseUser(cred.user);
+      SAVE.data.profile={...SAVE.data.profile,authProvider:'google.com'};
+      await this.syncToCloud();
+      SCREENS.show('mainMenu');
+      TOAST.show('GOOGLE SIGN-IN COMPLETE');
+    }catch(e){ TOAST.show((e&&e.code?e.code:'GOOGLE SIGN-IN FAILED').replace('auth/','').replaceAll('-',' ').toUpperCase()); }
+  },
+  async guest(){
+    if(await this._ensureFirebase()){
+      const {auth,authMod} = this.fb;
+      if(auth.currentUser) await authMod.signOut(auth);
+    }
+    SAVE.data.profile={...SAVE.data.profile,signedIn:false,guest:true,email:'',uid:'',authProvider:'guest',verified:false,admin:false,badge:'none'};
+    SAVE.save(); this.render(); SCREENS.show('mainMenu');
+    TOAST.show('CONTINUING AS GUEST');
+  },
+  async changeUsername(){
+    const p=SAVE.data.profile;
+    const week=7*24*3600*1000;
+    if((p.usernameChanges||0)>=2 && Date.now()-(p.lastUsernameChange||0)<week){ TOAST.show('USERNAME LIMIT REACHED (7D)'); return; }
+    const ok = await UI_CONFIRM.ask({title:'CHANGE USERNAME',message:'Enter your new username below.',requireText:''});
+    if(!ok) return;
+    const next=(document.getElementById('authUser')||{}).value||'';
+    if(!next.trim()){ TOAST.show('ENTER USERNAME IN USERNAME FIELD'); return; }
+    p.username=next.trim().slice(0,18);
+    p.usernameChanges=(p.usernameChanges||0)+1;
+    p.lastUsernameChange=Date.now();
+    await this.syncToCloud();
+    SAVE.save(); this.render();
+  },
+
+  async deleteAccount(){
+    if(!SAVE.data.profile.signedIn||!SAVE.data.profile.uid){ TOAST.show('NOT SIGNED IN'); return; }
+    const ok = await UI_CONFIRM.ask({title:'DELETE ACCOUNT',message:'This permanently removes your account data. Type DELETE to confirm.',requireText:'DELETE'});
+    if(!ok) return;
+    if(!await this._ensureFirebase()) return;
+    const {db,dbMod,auth,authMod} = this.fb;
+    const uid=SAVE.data.profile.uid;
+    try{
+      await dbMod.remove(dbMod.ref(db,this._uidPath(uid)));
+      if(auth.currentUser) await authMod.deleteUser(auth.currentUser);
+      await this.guest();
+      TOAST.show('ACCOUNT DELETED');
+    }catch(e){ TOAST.show('DELETE FAILED'); }
+  },
+  render(){
+    const p=SAVE.data.profile||{};
+    const badge = p.admin ? 'ADMIN ◻' : (p.verified ? 'VERIFIED ◻' : 'UNVERIFIED ◻');
+    const nameEl=document.getElementById('accountName');
+    if(nameEl) nameEl.textContent=(p.username||'Guest');
+    const badgeEl=document.getElementById('accountBadge');
+    if(badgeEl) badgeEl.textContent=badge;
+    const metaEl=document.getElementById('accountMeta');
+    if(metaEl) metaEl.textContent=p.signedIn?`Signed in as ${p.email||'account user'}`:'SIGN IN TO SAVE PROGRESS AND CONNECT WITH FRIENDS FOR FREE!';
+    const sf=document.getElementById('socialCounts');
+    if(sf) sf.textContent=`Account flags: verified=${!!p.verified} | admin=${!!p.admin}`;
+  }
+};
+
 // ---- SCREENS ----
 const SCREENS = {
   history:[],
   pauseReturn:false,
-  all:['mainMenu','settingsScreen','questScreen','shopScreen','statsScreen','htpScreen','creditsScreen','loadScreen'],
+  all:['mainMenu','settingsScreen','questScreen','shopScreen','statsScreen','htpScreen','creditsScreen','loadScreen','authScreen'],
   show(id){
     this.all.forEach(s=>{
       const el=document.getElementById(s);
@@ -940,6 +1227,7 @@ const SETTINGS = {
     el.innerHTML = opts.map(o=>`<button class="s-btn ${o==val?'active':''}" onclick="SETTINGS.set('${key}',${typeof o==='string'?`'${o}'`:o})">${o===true?'On':o===false?'Off':o}</button>`).join('');
   },
   set(key, val){
+    if(key==='difficulty' && (SAVE.data.checkpoints||[]).length){ UI_CONFIRM.ask({title:'CHANGE DIFFICULTY',message:'Change difficulty now? This affects current/new maze generation.'}).then(ok=>{ if(!ok) return; SAVE.data.settings[key] = val; this.renderAll(); SAVE.save(); TOAST.show('SETTINGS SAVED'); }); return; }
     SAVE.data.settings[key] = val;
     SAVE.save();
     this.renderAll();
@@ -1032,13 +1320,21 @@ const QUESTS = {
     {id:'q_perfect1',name:'Perfect Run',desc:'Finish a run without using a checkpoint',type:'noCkptRun',target:1,reward:{diamonds:15,coins:500},diff:'hard'},
     {id:'q_three1',name:'Triple Treasure',desc:'Complete 3 treasure rooms in one run',type:'treasureRunRooms',target:3,reward:{diamonds:10},diff:'hard'},
   ],
+  extra:{quests:[],missions:[],challenges:[]},
   progress:{},
+  initPools(){
+    if(this.extra.quests.length) return;
+    for(let i=1;i<=480;i++) this.extra.quests.push('Quest '+i+': Clear sector '+((i%97)+1));
+    for(let i=1;i<=125;i++) this.extra.missions.push('Mission '+i+': Secure floor '+((i%60)+1));
+    for(let i=1;i<=37;i++) this.extra.challenges.push('Challenge '+i+': No hit streak '+((i%12)+1));
+  },
   defaults(){
     const p={};
     this.list.forEach(q=>{ p[q.id]={progress:0,completed:false}; });
     return p;
   },
   load(){
+    this.initPools();
     const saved = SAVE.data.quests||{};
     this.list.forEach(q=>{
       this.progress[q.id] = saved[q.id]||{progress:0,completed:false};
@@ -1084,6 +1380,23 @@ const QUESTS = {
     if(!pinnedEl||!allEl) return;
     pinnedEl.innerHTML = pinned.map(id=>{ const q=this.list.find(x=>x.id===id); return q?this.cardHTML(q,true):''; }).join('');
     allEl.innerHTML = this.list.map(q=>this.cardHTML(q,pinned.includes(q.id))).join('');
+    this.renderDailyRotation();
+  },
+  renderDailyRotation(){
+    this.initPools();
+    const now=Date.now();
+    const slot=Math.floor(now/(8*3600*1000));
+    const qStart=(slot*20)%this.extra.quests.length;
+    const mStart=(slot*10)%this.extra.missions.length;
+    const cStart=(slot*3)%this.extra.challenges.length;
+    const q=this.extra.quests.slice(qStart,qStart+20);
+    const m=this.extra.missions.slice(mStart,mStart+10);
+    const c=this.extra.challenges.slice(cStart,cStart+3);
+    const nextAt=(slot+1)*(8*3600*1000);
+    const meta=document.getElementById('dailyRotationMeta');
+    if(meta) meta.textContent=`Pool: ${this.extra.quests.length} quests, ${this.extra.missions.length} missions, ${this.extra.challenges.length} challenges. Next refresh: ${new Date(nextAt).toLocaleString()}`;
+    const fill=(id,arr)=>{ const el=document.getElementById(id); if(el) el.innerHTML=arr.map(x=>`<li>${x}</li>`).join(''); };
+    fill('dailyQuestList',q); fill('dailyMissionList',m); fill('dailyChallengeList',c);
   },
   cardHTML(q, isPinned){
     const p = this.progress[q.id]||{progress:0,completed:false};
@@ -1212,6 +1525,8 @@ const SHOP = {
 const MAZE = {
   grid:[],
   width:0, height:0,
+  dirty:true,
+  claimKey(x,y,t){ return `${x},${y}:${t}`; },
   _themeFor(floor){
     if(floor<=3) return 'stone';
     if(floor<=10) return 'neon';
@@ -1230,7 +1545,7 @@ const MAZE = {
       if(!this.grid[y]) this.grid[y]=[];
       for(let x=startX;x<w;x++){
         this.grid[y][x]={ x,y, walls:{N:true,E:true,S:true,W:true},
-          type:'normal', visited:false, items:[], trap:null, warpTo:null, revealed:false,
+          type:'normal', visited:false, items:[], trap:null, warpTo:null, revealed:false, locked:false, unlocked:false,
           theme:'stone', explored:false };
       }
     }
@@ -1238,6 +1553,7 @@ const MAZE = {
     if(startX>0) this._connectSections(startX-1, startX);
     this._placeSpecials(startX, w);
     this._placeItems(startX, w);
+    this.dirty=true;
   },
   extend(){
     const oldW = this.width;
@@ -1302,10 +1618,14 @@ const MAZE = {
         else if(r<safeDensity+0.07+(SAVE.data.upgrades.treasureLuck||0)*0.02) cell.type='treasure';
         else if(r<safeDensity+0.07+0.03+(SAVE.data.upgrades.treasureLuck||0)*0.01) cell.type='merchant';
         else if(r<safeDensity+0.07+0.03+0.01) cell.type='diamond_vault';
+        else if(floor>8 && r<safeDensity+0.07+0.03+0.02) { cell.type='locked'; cell.locked=true; }
         else if(r<trapDensity) cell.type='trap';
         if(floor>4 && Math.random()<0.03 && x>4){
           const tx=Math.max(1, x-(2+Math.floor(Math.random()*5)));
-          cell.warpTo={x:tx,y};
+          const target=this.grid[y]&&this.grid[y][tx];
+          if(target && target.type!=='trap' && target.type!=='locked' && !target.warpTo){
+            cell.warpTo={x:tx,y};
+          }
         }
         cell.theme = this._themeFor(floor);
       }
@@ -1316,22 +1636,31 @@ const MAZE = {
     for(let y=0;y<this.height;y++){
       for(let x=sx;x<ex;x++){
         const cell=this.grid[y]&&this.grid[y][x]; if(!cell) continue;
+        const claimed=(type)=>!!(SAVE.data.claimedCells||{})[this.claimKey(x,y,type)];
         if(cell.type==='treasure'){
-          cell.items=[{type:'chest',opened:false},{type:'coin',value:5,collected:false}];
-          if(Math.random()<diaChance+0.2) cell.items.push({type:'diamond',value:1,collected:false});
+          cell.items=[];
+          if(!claimed('chest')) cell.items.push({type:'chest',opened:false});
+          if(!claimed('coin5')) cell.items.push({type:'coin',value:5,collected:false});
+          if(Math.random()<diaChance+0.2 && !claimed('diamond1')) cell.items.push({type:'diamond',value:1,collected:false});
         } else if(cell.type==='diamond_vault'){
-          cell.items=[{type:'diamond',value:2,collected:false},{type:'diamond',value:1,collected:false}];
+          cell.items=[];
+          if(!claimed('diamond2')) cell.items.push({type:'diamond',value:2,collected:false});
+          if(!claimed('diamond1b')) cell.items.push({type:'diamond',value:1,collected:false});
         } else if(cell.type==='safe'){
-          cell.items=[{type:'coin',value:2,collected:false}];
-          if(Math.random()<0.35) cell.items.push({type:'powerup',kind:'heal',collected:false});
+          cell.items=[];
+          if(!claimed('coin2')) cell.items.push({type:'coin',value:2,collected:false});
+          if(Math.random()<0.35 && !claimed('heal')) cell.items.push({type:'powerup',kind:'heal',collected:false});
           if(Math.random()<0.3) cell.items.push({type:'coin',value:1,collected:false});
         } else if(cell.type==='trap'){
           if(Math.random()<0.3) cell.items.push({type:'coin',value:3,collected:false});
+        } else if(cell.type==='locked'){
+          cell.items=[];
         } else {
           if(Math.random()<0.6) cell.items.push({type:'coin',value:1,collected:false});
           if(Math.random()<0.15) cell.items.push({type:'coin',value:2,collected:false});
           if(Math.random()<diaChance) cell.items.push({type:'diamond',value:1,collected:false});
-          if(Math.random()<0.08) cell.items.push({type:'powerup',kind:Math.random()<0.5?'speed':'shield',collected:false});
+          if(Math.random()<0.1){ const kinds=['speed','shield','luck','phase']; const k=kinds[Math.floor(Math.random()*kinds.length)]; if(!claimed('pw_'+k)) cell.items.push({type:'powerup',kind:k,collected:false}); }
+          if(x>12 && Math.random()<0.03) cell.items.push({type:'key',value:1,collected:false});
         }
         if(cell.type==='trap'){
           const tTypes=['spike','spike','spike','mist','saw'];
@@ -1357,7 +1686,7 @@ const PLAYER = {
   noDmgTimer:0,
   treasureThisRun:0,
   boosts:[],
-  invRevive:0, invShield:false, invCompass:false, invFreeze:false,
+  invRevive:0, invShield:false, invCompass:false, invFreeze:false, keys:0,
   init(){
     this.x=1; this.y=Math.floor(CFG.MAZE_H/2);
     this.px=this.x; this.py=this.y;
@@ -1370,6 +1699,7 @@ const PLAYER = {
     this.boosts=[];
     this.invRevive=SAVE.data['inv_util_revive']||0;
     this.invShield=false; this.invCompass=false;
+    this.keys=0;
     this.moving=false; this.moveTime=0;
     MAZE.grid[this.y][this.x].explored=true;
   },
@@ -1378,9 +1708,20 @@ const PLAYER = {
     if(STATE.paused) return;
     const cell = MAZE.cell(this.x, this.y); if(!cell) return;
     const dir = dx===1?'E':dx===-1?'W':dy===1?'S':'N';
-    if(cell.walls[dir]) return; // wall blocks
+    if(cell.walls[dir]){
+      const phase=this.boosts.find(b=>b.type==='phase');
+      if(phase){ phase.time=0; TOAST.show('👻 PHASE USED'); }
+      else return;
+    }
     const nx=this.x+dx, ny=this.y+dy;
     const next=MAZE.cell(nx,ny); if(!next) return;
+    if(next.type==='locked' && !next.unlocked){
+      if(this.keys>0){
+        this.keys--; next.unlocked=true; next.locked=false; MAZE.dirty=true;
+        TOAST.show('🗝 LOCK UNSEALED');
+        PARTICLES.burst(nx*CFG.CELL+CFG.CELL/2, ny*CFG.CELL+CFG.CELL/2, '#ffd700', 26);
+      } else { TOAST.show('🔒 LOCKED WALL — FIND A KEY'); return; }
+    }
     const spd = Math.max(80, CFG.MOVE_DELAY - (SAVE.data.upgrades.moveSpeed||0)*15);
     this.moving=true; this.moveTime=spd;
     this.px=this.x; this.py=this.y;
@@ -1416,20 +1757,23 @@ const PLAYER = {
     const mag = SAVE.data.upgrades.coinMagnet||0;
     this._collectInRadius(mag);
     if(cell.warpTo){
-      this.x=cell.warpTo.x; this.y=cell.warpTo.y;
-      this.px=this.x; this.py=this.y;
-      TOAST.show('🌀 WARP JUMP!');
-      PARTICLES.burst(this.x*CFG.CELL+CFG.CELL/2, this.y*CFG.CELL+CFG.CELL/2, "#00e5ff", 24);
+      const t=MAZE.cell(cell.warpTo.x,cell.warpTo.y);
+      if(t && t.type!=='trap' && !(t.type==='locked'&&!t.unlocked)){
+        this.x=cell.warpTo.x; this.y=cell.warpTo.y;
+        this.px=this.x; this.py=this.y;
+        TOAST.show('🌀 WARP JUMP!');
+        PARTICLES.burst(this.x*CFG.CELL+CFG.CELL/2, this.y*CFG.CELL+CFG.CELL/2, "#00e5ff", 24);
+      }
     }
     // trap
-    if(cell.type==='trap' && cell.trap && !cell.trap.triggered){
+    if(cell.type==='trap' && cell.trap && !cell.trap.triggered){ MAZE.dirty=true;
       if(this.invShield){ this.invShield=false; TOAST.show('🛡 SHIELD BLOCKED TRAP!'); }
       else { this.takeDamage(1, cell.trap.type); cell.trap.triggered=true; }
       SAVE.data.trapsTriggered=(SAVE.data.trapsTriggered||0)+1;
       QUESTS.updateProgress('trapRoomsCleared',0); // track trap rooms cleared (no damage = incremented separately)
     }
     // checkpoint
-    if(cell.type==='checkpoint'){
+    if(cell.type==='checkpoint'){ MAZE.dirty=true;
       this.checkpointX=this.x; this.checkpointY=this.y;
       SAVE.data.totalCheckpointsUsed=(SAVE.data.totalCheckpointsUsed||0)+1;
       QUESTS.updateProgress('totalCheckpointsUsed',1);
@@ -1476,13 +1820,15 @@ const PLAYER = {
         const c=MAZE.cell(this.x+dx2,this.y+dy2); if(!c) continue;
         c.items.forEach(item=>{
           if(item.collected) return;
-          if(item.type==='coin'){ item.collected=true; this._addCoins(item.value); }
-          if(item.type==='diamond'){ item.collected=true; this._addDiamonds(item.value); }
-          if(item.type==='powerup'){ item.collected=true; this._collectPowerup(item.kind||'speed'); }
-          if(item.type==='chest'&&dx2===0&&dy2===0){ item.opened=true; this._openChest(); }
+          if(item.type==='coin'){ item.collected=true; this._addCoins(item.value); SAVE.data.claimedCells[MAZE.claimKey(this.x+dx2,this.y+dy2,'coin'+(item.value||1))]=1; }
+          if(item.type==='diamond'){ item.collected=true; this._addDiamonds(item.value); SAVE.data.claimedCells[MAZE.claimKey(this.x+dx2,this.y+dy2,'diamond'+(item.value||1))]=1; }
+          if(item.type==='powerup'){ item.collected=true; this._collectPowerup(item.kind||'speed'); SAVE.data.claimedCells[MAZE.claimKey(this.x+dx2,this.y+dy2,'pw_'+(item.kind||'speed'))]=1; }
+          if(item.type==='key'){ item.collected=true; this.keys+=(item.value||1); TOAST.show('🗝 KEY FOUND'); SAVE.data.claimedCells[MAZE.claimKey(this.x+dx2,this.y+dy2,'key')]=1; HUD.update(); }
+          if(item.type==='chest'&&dx2===0&&dy2===0){ item.opened=true; this._openChest(); SAVE.data.claimedCells[MAZE.claimKey(this.x,this.y,'chest')]=1; }
         });
       }
     }
+    MAZE.dirty=true;
   },
   _collectPowerup(kind){
     if(kind==='heal'){
@@ -1491,6 +1837,12 @@ const PLAYER = {
     } else if(kind==='shield'){
       this.invShield=true;
       TOAST.show('🛡 POWERUP: SHIELD READY');
+    } else if(kind==='luck'){
+      this.boosts.push({type:'luck',name:'LUCK',icon:'🍀',time:25});
+      TOAST.show('🍀 POWERUP: LUCK BOOST');
+    } else if(kind==='phase'){
+      this.boosts.push({type:'phase',name:'PHASE',icon:'👻',time:10});
+      TOAST.show('👻 POWERUP: PHASE STEP');
     } else {
       this.boosts.push({type:'speed',name:'SPEED',icon:'⚡',time:20});
       TOAST.show('⚡ POWERUP: SPEED BOOST');
@@ -1515,7 +1867,8 @@ const PLAYER = {
   },
   _openChest(){
     const r=Math.random();
-    const luckMod = 1+(SAVE.data.upgrades.treasureLuck||0)*0.15;
+    const luckBoost=this.boosts.find(b=>b.type==='luck')?0.35:0;
+    const luckMod = 1+(SAVE.data.upgrades.treasureLuck||0)*0.15+luckBoost;
     if(r<0.1*luckMod){ this._addDiamonds(Math.ceil(Math.random()*3)); TOAST.show('💎 DIAMOND CHEST!'); }
     else { this._addCoins(Math.ceil(Math.random()*15+5)*luckMod); }
     QUESTS.updateProgress('chestsOpened',1);
@@ -1592,6 +1945,8 @@ const PARTICLES = {
 
 // ---- RENDERER ----
 const RENDERER = {
+  mapCache:null,
+  mapCtx:null,
   themeColors:{
     stone:{floor:'#0f0f18',wall:'#1e1e30',wallBright:'#2a2a45',accent:'#333355'},
     neon:{floor:'#050510',wall:'#003333',wallBright:'#005555',accent:'#00e5ff'},
@@ -1608,6 +1963,7 @@ const RENDERER = {
     safe:{floor:'#000a15',glow:'#00e5ff'},
     diamond_vault:{floor:'#000515',glow:'#00aaff'},
     trap:{floor:'#1a0003',glow:'#ff2244'},
+    locked:{floor:'#130d02',glow:'#ff8800'},
   },
   draw(ctx, canvas){
     const cw=canvas.width, ch=canvas.height;
@@ -1617,22 +1973,25 @@ const RENDERER = {
     ctx.fillRect(0,0,cw,ch);
     const cs=CFG.CELL;
     const offX=CAM.x, offY=CAM.y;
-    const startCX=Math.max(0,Math.floor(offX/cs)-1);
-    const endCX=Math.min(MAZE.width-1,Math.ceil((offX+cw)/cs)+1);
-    const startCY=Math.max(0,Math.floor(offY/cs)-1);
-    const endCY=Math.min(MAZE.height-1,Math.ceil((offY+ch)/cs)+1);
-    for(let y=startCY;y<=endCY;y++){
-      for(let x=startCX;x<=endCX;x++){
-        const cell=MAZE.cell(x,y); if(!cell) continue;
-        this.drawCell(ctx,cell,x,y,offX,offY,cs);
-      }
+    if(!this.mapCache || this.mapCache.width!==MAZE.width*cs || this.mapCache.height!==MAZE.height*cs){
+      this.mapCache=document.createElement('canvas');
+      this.mapCache.width=MAZE.width*cs; this.mapCache.height=MAZE.height*cs;
+      this.mapCtx=this.mapCache.getContext('2d');
+      MAZE.dirty=true;
     }
-    // draw player
+    if(MAZE.dirty){
+      const mc=this.mapCtx;
+      mc.clearRect(0,0,this.mapCache.width,this.mapCache.height);
+      for(let y=0;y<MAZE.height;y++) for(let x=0;x<MAZE.width;x++){
+        const cell=MAZE.cell(x,y); if(cell) this.drawCell(mc,cell,x,y,0,0,cs,true);
+      }
+      MAZE.dirty=false;
+    }
+    ctx.drawImage(this.mapCache, offX, offY, cw, ch, 0,0,cw,ch);
     this.drawPlayer(ctx, offX, offY, cs);
-    // draw particles
     PARTICLES.draw(ctx, offX, offY);
   },
-  drawCell(ctx,cell,x,y,offX,offY,cs){
+  drawCell(ctx,cell,x,y,offX,offY,cs,cacheOnly=false){
     const px=x*cs-offX, py=y*cs-offY;
     const tc=this.themeColors[cell.theme]||this.themeColors.stone;
     const typeC=this.cellTypeColors[cell.type];
@@ -1654,6 +2013,7 @@ const RENDERER = {
       if(it.type==='diamond'){ this.drawDiamond(ctx,px+cs/2,py+cs/2,7); }
       if(it.type==='chest'){ this.drawChest(ctx,px+cs/2,py+cs*0.55); }
       if(it.type==='powerup'){ this.drawPowerup(ctx,px+cs/2,py+cs/2,it.kind); }
+      if(it.type==='key'){ this.drawKey(ctx,px+cs/2,py+cs/2); }
     });
     // trap
     if(cell.type==='trap'&&cell.trap&&!cell.trap.triggered) this.drawTrap(ctx,px,py,cs,cell.trap.type);
@@ -1661,6 +2021,7 @@ const RENDERER = {
     if(cell.type==='checkpoint') this.drawCheckpointMarker(ctx,px,py,cs);
     if(cell.type==='merchant') this.drawMerchantMarker(ctx,px,py,cs);
     if(cell.type==='safe') this.drawSafeMarker(ctx,px,py,cs);
+    if(cell.type==='locked' && !cell.unlocked) this.drawLockedMarker(ctx,px,py,cs);
     // walls
     const wc=tc.wallBright; const wt=3;
     ctx.fillStyle=wc;
@@ -1669,6 +2030,7 @@ const RENDERER = {
     if(cell.walls.W) ctx.fillRect(px,py,wt,cs);
     if(cell.walls.E) ctx.fillRect(px+cs-wt,py,wt,cs);
     if(cell.warpTo) this.drawWarpMarker(ctx,px,py,cs);
+    if(cacheOnly) return;
   },
   drawPlayer(ctx,offX,offY,cs){
     const px=PLAYER.px*cs-offX+cs/2;
@@ -1742,6 +2104,13 @@ const RENDERER = {
       }
     }
   },
+  drawKey(ctx,x,y){
+    ctx.save();
+    ctx.fillStyle='#ffd700';
+    ctx.font='16px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🗝',x,y);
+    ctx.restore();
+  },
   drawPowerup(ctx,x,y,kind){
     ctx.save();
     ctx.font='16px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -1774,6 +2143,16 @@ const RENDERER = {
     ctx.strokeRect(px+2,py+2,cs-4,cs-4);
     ctx.font='18px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText('💜',px+cs/2,py+cs/2);
+  },
+  drawLockedMarker(ctx,px,py,cs){
+    const p=(Math.sin(Date.now()/180)+1)/2;
+    ctx.fillStyle='rgba(255,136,0,0.12)';
+    ctx.fillRect(px,py,cs,cs);
+    ctx.strokeStyle=`rgba(255,136,0,${0.5+p*0.5})`; ctx.lineWidth=2;
+    ctx.strokeRect(px+3,py+3,cs-6,cs-6);
+    ctx.font='18px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#ffb347';
+    ctx.fillText('🔒',px+cs/2,py+cs/2);
   },
   drawSafeMarker(ctx,px,py,cs){
     ctx.fillStyle='rgba(0,100,200,0.15)';
@@ -1818,6 +2197,7 @@ const HUD = {
     document.getElementById('hudCoins').textContent='🪙 '+PLAYER.coinsThisRun;
     document.getElementById('hudDiamonds').textContent='💎 '+PLAYER.diamondsThisRun;
     document.getElementById('hudFloor').textContent='FLOOR '+STATE.currentFloor;
+    const hk=document.getElementById('hudKeys'); if(hk) hk.textContent='🗝 '+(PLAYER.keys||0);
     const floorPct=Math.round(((PLAYER.x%CFG.FLOOR_EVERY)/CFG.FLOOR_EVERY)*100);
     document.getElementById('hudFloorFill').style.width=floorPct+'%';
     document.getElementById('hudFloorLabel').textContent='NEXT FLOOR '+floorPct+'%';
@@ -2102,10 +2482,12 @@ const GAME = {
     SAVE.load();
     QUESTS.load();
     TOAST.init();
+    UI_CONFIRM.init();
     BGM.init();
     BGANIM.init();
     MINIMAP.init();
     INPUT.init();
+    AUTH.init();
     SCREENS.show('mainMenu');
     updateMainMenuStats();
     SETTINGS.init();
@@ -2120,7 +2502,8 @@ const GAME = {
     this.canvas.height = window.innerHeight;
   },
 
-  newRun(){
+  newRun(force=false){
+    if(!force && (SAVE.data.checkpoints||[]).length){ UI_CONFIRM.ask({title:'START NEW RUN',message:'Existing continue progress is kept, but your active run will restart. Continue?'}).then(ok=>{ if(ok) this.newRun(true); }); return; }
     SCREENS.hideAll();
     SAVE.data.totalRuns = (SAVE.data.totalRuns||0)+1;
     MAZE.grid=[]; MAZE.width=0; MAZE.height=0;
@@ -2140,6 +2523,7 @@ const GAME = {
   },
   continueRun(){
     const ckpts = SAVE.data.checkpoints||[];
+    SAVE.save();
     if(!ckpts.length){ this.newRun(); return; }
     this.loadFromCheckpoint(ckpts[0]);
   },
@@ -2251,8 +2635,11 @@ const GAME = {
     TOAST.show('🚩 RETURNED TO CHECKPOINT');
   },
   returnToMenu(){
-    this.resume();
-    this._endRun('escape');
+    UI_CONFIRM.ask({title:'END RUN',message:'Return to menu and end this run?'}).then(ok=>{
+      if(!ok) return;
+      this.resume();
+      this._endRun('escape');
+    });
   },
   playerDied(){
     SAVE.data.totalDeaths=(SAVE.data.totalDeaths||0)+1;
@@ -2347,6 +2734,7 @@ const GAME = {
 // ---- HELPERS ----
 function updateMainMenuStats(){
   if(!SAVE.data) return;
+  AUTH.render();
   const fmt=n=>n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':n;
   document.getElementById('mmCoins').textContent='🪙 '+fmt(SAVE.data.coins||0);
   document.getElementById('mmDiamonds').textContent='💎 '+(SAVE.data.diamonds||0);
@@ -2374,6 +2762,7 @@ function renderCheckpointLoad(){
 
 // ---- BOOT ----
 window.addEventListener('load',()=>{
+  if(('ontouchstart' in window) || navigator.maxTouchPoints>0) document.documentElement.classList.add('touch');
   document.addEventListener('dragstart',e=>e.preventDefault());
   document.addEventListener('selectstart',e=>e.preventDefault());
   document.addEventListener('contextmenu',e=>e.preventDefault());
