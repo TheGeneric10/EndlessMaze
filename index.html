@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>ENDLESS MAZE v0.26.20</title>
+<title>ENDLESS MAZE v0.26.30</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&display=swap');
 *{margin:0;padding:0;box-sizing:border-box;-webkit-user-select:none;-moz-user-select:none;user-select:none;-webkit-user-drag:none;}
@@ -361,6 +361,16 @@ canvas{display:block;}
 #damageFlash{position:fixed;inset:0;z-index:600;pointer-events:none;
   background:rgba(255,34,68,0.25);opacity:0;transition:opacity 0.1s;}
 
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:none;align-items:center;justify-content:center;z-index:1200;}
+.confirm-overlay.active{display:flex;}
+.confirm-box{width:min(92vw,430px);background:var(--panel2);border:1px solid var(--cyan2);border-radius:8px;padding:16px;transform:translateY(40px);opacity:0;transition:all .25s ease;box-shadow:0 12px 30px rgba(0,0,0,.45);}
+.confirm-overlay.active .confirm-box{transform:translateY(0);opacity:1;}
+.confirm-title{font-family:var(--font-t);letter-spacing:2px;color:var(--cyan);font-size:12px;margin-bottom:8px;}
+.confirm-msg{color:var(--white);font-size:12px;line-height:1.5;margin-bottom:10px;}
+.confirm-input{width:100%;background:var(--panel);color:var(--white);border:1px solid var(--border);padding:8px;border-radius:4px;margin-bottom:12px;}
+.daily-board{margin-top:10px;padding:10px;background:rgba(0,0,0,.25);border:1px solid var(--border2);border-radius:6px;}
+.daily-split{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:10px;}
+.daily-split ul{margin:6px 0 0 14px;padding:0;max-height:100px;overflow:auto;}
 /* SCROLL FIX for overlay screens */
 .overlay-screen{overflow-y:auto;padding-bottom:24px;}
 </style>
@@ -466,7 +476,7 @@ canvas{display:block;}
     <div class="mm-logo">
       <h1>ENDLESS<br>MAZE</h1>
       <div class="sub">EXPLORE · SURVIVE · ESCAPE</div>
-      <div class="ver">v0.26.20 — CONNECTED EDITION</div>
+      <div class="ver">v0.26.30 — CONNECTED EDITION</div>
     </div>
     <div class="mm-account"><div><div class="name" id="accountName">Guest <span class="tag" id="accountBadge"></span></div><div class="meta" id="accountMeta">SIGN IN TO SAVE PROGRESS AND CONNECT WITH FRIENDS FOR FREE!</div></div><button class="mm-btn" style="width:auto;padding:8px 10px;text-align:center;" onclick="AUTH.open()">ACCOUNT</button></div>
     <div class="mm-stats-row">
@@ -598,6 +608,15 @@ canvas{display:block;}
     <div style="height:12px;"></div>
     <div class="quest-pinned-header">ALL QUESTS</div>
     <div id="allQuestList"></div>
+    <div class="daily-board">
+      <div class="quest-pinned-header">⏱ ROTATING BOARD (EVERY 8 HOURS)</div>
+      <div id="dailyRotationMeta" style="font-size:10px;color:var(--dim);margin-bottom:6px;"></div>
+      <div class="daily-split">
+        <div><b>Quests</b><ul id="dailyQuestList"></ul></div>
+        <div><b>Missions</b><ul id="dailyMissionList"></ul></div>
+        <div><b>Challenges</b><ul id="dailyChallengeList"></ul></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -708,12 +727,23 @@ canvas{display:block;}
     <div class="auth-card">
       <h3>PUBLIC PROFILE</h3>
       <div class="social-grid">
-        <button class="mm-btn" onclick="AUTH.cyclePrivacy('friends')">Friends List: <span id="privacyFriends">PRIVATE</span></button>
-        <button class="mm-btn" onclick="AUTH.cyclePrivacy('followers')">Followers List: <span id="privacyFollowers">PRIVATE</span></button>
-        <button class="mm-btn" onclick="AUTH.cyclePrivacy('following')">Following List: <span id="privacyFollowing">PRIVATE</span></button>
         <button class="mm-btn" onclick="AUTH.changeUsername()">Change Username</button>
+        <button class="mm-btn" onclick="AUTH.deleteAccount()">Delete Account</button>
       </div>
-      <div style="margin-top:8px;font-size:11px;color:var(--dim);" id="socialCounts">Friends 0 | Followers 0 | Following 0</div>
+      <div style="margin-top:8px;font-size:11px;color:var(--dim);" id="socialCounts">Account flags: verified=false | admin=false</div>
+    </div>
+  </div>
+</div>
+
+
+<div id="confirmOverlay" class="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirmTitle">CONFIRM</div>
+    <div class="confirm-msg" id="confirmMsg"></div>
+    <input id="confirmInput" class="confirm-input" style="display:none;" />
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="mm-btn" onclick="UI_CONFIRM.no()">CANCEL</button>
+      <button class="mm-btn" onclick="UI_CONFIRM.yes()" id="confirmYesBtn">CONFIRM</button>
     </div>
   </div>
 </div>
@@ -727,7 +757,7 @@ canvas{display:block;}
   <div class="screen-body">
     <div class="credits-section">
       <div class="title-big">ENDLESS MAZE</div>
-      <div style="color:var(--gold);font-family:var(--font-t);letter-spacing:3px;margin-bottom:24px;">v0.26.20 — CONNECTED EDITION</div>
+      <div style="color:var(--gold);font-family:var(--font-t);letter-spacing:3px;margin-bottom:24px;">v0.26.30 — CONNECTED EDITION</div>
       <div style="color:var(--cyan);font-family:var(--font-t);font-size:11px;letter-spacing:2px;margin-bottom:6px;">DESIGN & DEVELOPMENT</div>
       <div>Procedural Maze Engine</div>
       <div>Particle System</div>
@@ -759,12 +789,12 @@ canvas{display:block;}
 
 <script>
 // ============================================================
-// ENDLESS MAZE v0.26.20 — GAME ENGINE
+// ENDLESS MAZE v0.26.30 — GAME ENGINE
 // ============================================================
 
 // ---- CONFIG ----
 const CFG = {
-  VERSION:'v0.26.20',
+  VERSION:'v0.26.30',
   CELL:48,       // px per maze cell
   MAZE_W:60,     // initial maze width in cells
   MAZE_H:15,     // maze height in cells
@@ -811,9 +841,9 @@ const SAVE = {
       quests:QUESTS.defaults(),
       pinnedQuests:['q_coin1','q_deep1','q_trap1'],
       checkpoints:[],
-      profile:{signedIn:false,guest:true,email:'',username:'Guest',badge:'verified',usernameChanges:0,lastUsernameChange:0,authProvider:'guest'},
-      social:{friends:[],followers:[],following:[],privacy:{friends:'PRIVATE',followers:'PRIVATE',following:'PRIVATE'}},
+      profile:{signedIn:false,guest:true,email:'',username:'Guest',badge:'none',verified:false,admin:false,usernameChanges:0,lastUsernameChange:0,authProvider:'guest'},
       cloudBlob:'',
+      claimedCells:{},
       lastSave:null,
     };
   },
@@ -839,11 +869,13 @@ const SAVE = {
   exportSave(){ TOAST.show('SIGN IN TO SYNC PROGRESS'); },
   importSave(){ TOAST.show('SIGN IN TO SYNC PROGRESS'); },
   resetProgress(){
-    if(!confirm('RESET ALL PROGRESS? This cannot be undone.')) return;
-    this.data = this.defaults();
-    this.save();
-    TOAST.show('✔ PROGRESS RESET');
-    updateMainMenuStats();
+    UI_CONFIRM.ask({title:'RESET PROGRESS',message:'RESET ALL PROGRESS? This cannot be undone.'}).then(ok=>{
+      if(!ok) return;
+      this.data = this.defaults();
+      this.save();
+      TOAST.show('✔ PROGRESS RESET');
+      updateMainMenuStats();
+    });
   },
 };
 
@@ -856,6 +888,40 @@ const TOAST = {
     this.el.textContent = msg;
     this.el.classList.add('show');
     this.timer = setTimeout(()=>this.el.classList.remove('show'), dur);
+  }
+};
+
+
+
+const UI_CONFIRM = {
+  resolver:null,
+  init(){ this.el=document.getElementById('confirmOverlay'); },
+  ask({title='CONFIRM',message='',requireText=''}){
+    if(!this.el) this.init();
+    const t=document.getElementById('confirmTitle');
+    const m=document.getElementById('confirmMsg');
+    const i=document.getElementById('confirmInput');
+    if(t) t.textContent=title;
+    if(m) m.textContent=message;
+    if(i){
+      i.value='';
+      i.style.display=requireText?'block':'none';
+      i.placeholder=requireText?`Type ${requireText} to confirm`:'';
+      i.dataset.require=requireText||'';
+    }
+    this.el.classList.add('active');
+    return new Promise(res=>{ this.resolver=res; });
+  },
+  yes(){
+    const i=document.getElementById('confirmInput');
+    if(i && i.style.display!=='none' && (i.value||'').trim()!==i.dataset.require){ TOAST.show('TYPE CONFIRM TEXT EXACTLY'); return; }
+    this.close(true);
+  },
+  no(){ this.close(false); },
+  close(v){
+    if(this.el) this.el.classList.remove('active');
+    const r=this.resolver; this.resolver=null;
+    if(r) r(!!v);
   }
 };
 
@@ -918,8 +984,7 @@ const AUTH = {
     const snap = await dbMod.get(dbMod.ref(db, uidPath));
     const remote = snap.exists() ? (snap.val()||{}) : {};
     const remoteProfile = remote.profile||{};
-    const remoteSocial = remote.social||{};
-    SAVE.data.profile={
+        SAVE.data.profile={
       ...SAVE.data.profile,
       ...remoteProfile,
       signedIn:true,
@@ -927,13 +992,9 @@ const AUTH = {
       uid:user.uid,
       email:user.email||'',
       username:remoteProfile.username||user.displayName||SAVE.data.profile.username||'Player',
+      verified:!!remoteProfile.verified,
+      admin:!!remoteProfile.admin,
       authProvider:(user.providerData&&user.providerData[0]&&user.providerData[0].providerId)||'password'
-    };
-    SAVE.data.social={
-      friends:remoteSocial.friends||SAVE.data.social.friends||[],
-      followers:remoteSocial.followers||SAVE.data.social.followers||[],
-      following:remoteSocial.following||SAVE.data.social.following||[],
-      privacy:{...SAVE.data.social.privacy,...(remoteSocial.privacy||{})}
     };
     await this.syncToCloud();
     SAVE.save();
@@ -947,7 +1008,6 @@ const AUTH = {
     const uid = SAVE.data.profile.uid;
     const payload={
       profile:SAVE.data.profile,
-      social:SAVE.data.social,
       stats:{coins:SAVE.data.coins||0,diamonds:SAVE.data.diamonds||0,bestFloor:SAVE.data.bestFloor||0,totalRuns:SAVE.data.totalRuns||0},
       updated:Date.now()
     };
@@ -958,12 +1018,13 @@ const AUTH = {
       profile:{
         username:safeUsername,
         email:SAVE.data.profile.email||'',
-        badge:SAVE.data.profile.badge||'verified',
+        badge:SAVE.data.profile.badge||'none',
+        verified:!!SAVE.data.profile.verified,
+        admin:!!SAVE.data.profile.admin,
         usernameChanges:SAVE.data.profile.usernameChanges||0,
         lastUsernameChange:SAVE.data.profile.lastUsernameChange||0,
         authProvider:SAVE.data.profile.authProvider||'password'
       },
-      social:SAVE.data.social,
       stats:payload.stats,
       updatedAt:dbMod.serverTimestamp()
     });
@@ -978,7 +1039,7 @@ const AUTH = {
       const cred = await authMod.createUserWithEmailAndPassword(auth,email,pass);
       await authMod.updateProfile(cred.user,{displayName:user});
       await this._onFirebaseUser(cred.user);
-      SAVE.data.profile={...SAVE.data.profile,username:user,authProvider:'password'};
+      SAVE.data.profile={...SAVE.data.profile,username:user,authProvider:'password',verified:false,admin:false,badge:'none'};
       await this.syncToCloud();
       SCREENS.show('mainMenu');
       TOAST.show('ACCOUNT CREATED');
@@ -1013,7 +1074,7 @@ const AUTH = {
       const {auth,authMod} = this.fb;
       if(auth.currentUser) await authMod.signOut(auth);
     }
-    SAVE.data.profile={...SAVE.data.profile,signedIn:false,guest:true,email:'',uid:'',authProvider:'guest'};
+    SAVE.data.profile={...SAVE.data.profile,signedIn:false,guest:true,email:'',uid:'',authProvider:'guest',verified:false,admin:false,badge:'none'};
     SAVE.save(); this.render(); SCREENS.show('mainMenu');
     TOAST.show('CONTINUING AS GUEST');
   },
@@ -1021,26 +1082,34 @@ const AUTH = {
     const p=SAVE.data.profile;
     const week=7*24*3600*1000;
     if((p.usernameChanges||0)>=2 && Date.now()-(p.lastUsernameChange||0)<week){ TOAST.show('USERNAME LIMIT REACHED (7D)'); return; }
-    const next=prompt('New username:');
-    if(!next) return;
-    p.username=next.slice(0,18);
+    const ok = await UI_CONFIRM.ask({title:'CHANGE USERNAME',message:'Enter your new username below.',requireText:''});
+    if(!ok) return;
+    const next=(document.getElementById('authUser')||{}).value||'';
+    if(!next.trim()){ TOAST.show('ENTER USERNAME IN USERNAME FIELD'); return; }
+    p.username=next.trim().slice(0,18);
     p.usernameChanges=(p.usernameChanges||0)+1;
     p.lastUsernameChange=Date.now();
     await this.syncToCloud();
     SAVE.save(); this.render();
   },
-  async cyclePrivacy(key){
-    const vals=['PUBLIC','FRIENDS ONLY','PRIVATE'];
-    const cur=SAVE.data.social.privacy[key]||'PRIVATE';
-    const idx=(vals.indexOf(cur)+1)%vals.length;
-    SAVE.data.social.privacy[key]=vals[idx];
-    await this.syncToCloud();
-    SAVE.save(); this.render();
+
+  async deleteAccount(){
+    if(!SAVE.data.profile.signedIn||!SAVE.data.profile.uid){ TOAST.show('NOT SIGNED IN'); return; }
+    const ok = await UI_CONFIRM.ask({title:'DELETE ACCOUNT',message:'This permanently removes your account data. Type DELETE to confirm.',requireText:'DELETE'});
+    if(!ok) return;
+    if(!await this._ensureFirebase()) return;
+    const {db,dbMod,auth,authMod} = this.fb;
+    const uid=SAVE.data.profile.uid;
+    try{
+      await dbMod.remove(dbMod.ref(db,this._uidPath(uid)));
+      if(auth.currentUser) await authMod.deleteUser(auth.currentUser);
+      await this.guest();
+      TOAST.show('ACCOUNT DELETED');
+    }catch(e){ TOAST.show('DELETE FAILED'); }
   },
   render(){
     const p=SAVE.data.profile||{};
-    const social=SAVE.data.social||{friends:[],followers:[],following:[],privacy:{friends:'PRIVATE',followers:'PRIVATE',following:'PRIVATE'}};
-    const badge = p.authProvider==='google.com' ? 'VERIFIED ◻' : (p.username||'').toLowerCase()==='admin' ? 'ADMIN ◻' : 'VERIFIED ◻';
+    const badge = p.admin ? 'ADMIN ◻' : (p.verified ? 'VERIFIED ◻' : 'UNVERIFIED ◻');
     const nameEl=document.getElementById('accountName');
     if(nameEl) nameEl.textContent=(p.username||'Guest');
     const badgeEl=document.getElementById('accountBadge');
@@ -1048,10 +1117,7 @@ const AUTH = {
     const metaEl=document.getElementById('accountMeta');
     if(metaEl) metaEl.textContent=p.signedIn?`Signed in as ${p.email||'account user'}`:'SIGN IN TO SAVE PROGRESS AND CONNECT WITH FRIENDS FOR FREE!';
     const sf=document.getElementById('socialCounts');
-    if(sf) sf.textContent=`Friends ${social.friends.length} | Followers ${social.followers.length} | Following ${social.following.length}`;
-    const pf=document.getElementById('privacyFriends'); if(pf) pf.textContent=social.privacy.friends;
-    const pfo=document.getElementById('privacyFollowers'); if(pfo) pfo.textContent=social.privacy.followers;
-    const pfi=document.getElementById('privacyFollowing'); if(pfi) pfi.textContent=social.privacy.following;
+    if(sf) sf.textContent=`Account flags: verified=${!!p.verified} | admin=${!!p.admin}`;
   }
 };
 
@@ -1161,7 +1227,7 @@ const SETTINGS = {
     el.innerHTML = opts.map(o=>`<button class="s-btn ${o==val?'active':''}" onclick="SETTINGS.set('${key}',${typeof o==='string'?`'${o}'`:o})">${o===true?'On':o===false?'Off':o}</button>`).join('');
   },
   set(key, val){
-    if(key==='difficulty' && (SAVE.data.checkpoints||[]).length && !confirm('Change difficulty now? This affects current/new maze generation.')) return;
+    if(key==='difficulty' && (SAVE.data.checkpoints||[]).length){ UI_CONFIRM.ask({title:'CHANGE DIFFICULTY',message:'Change difficulty now? This affects current/new maze generation.'}).then(ok=>{ if(!ok) return; SAVE.data.settings[key] = val; this.renderAll(); SAVE.save(); TOAST.show('SETTINGS SAVED'); }); return; }
     SAVE.data.settings[key] = val;
     SAVE.save();
     this.renderAll();
@@ -1254,13 +1320,21 @@ const QUESTS = {
     {id:'q_perfect1',name:'Perfect Run',desc:'Finish a run without using a checkpoint',type:'noCkptRun',target:1,reward:{diamonds:15,coins:500},diff:'hard'},
     {id:'q_three1',name:'Triple Treasure',desc:'Complete 3 treasure rooms in one run',type:'treasureRunRooms',target:3,reward:{diamonds:10},diff:'hard'},
   ],
+  extra:{quests:[],missions:[],challenges:[]},
   progress:{},
+  initPools(){
+    if(this.extra.quests.length) return;
+    for(let i=1;i<=480;i++) this.extra.quests.push('Quest '+i+': Clear sector '+((i%97)+1));
+    for(let i=1;i<=125;i++) this.extra.missions.push('Mission '+i+': Secure floor '+((i%60)+1));
+    for(let i=1;i<=37;i++) this.extra.challenges.push('Challenge '+i+': No hit streak '+((i%12)+1));
+  },
   defaults(){
     const p={};
     this.list.forEach(q=>{ p[q.id]={progress:0,completed:false}; });
     return p;
   },
   load(){
+    this.initPools();
     const saved = SAVE.data.quests||{};
     this.list.forEach(q=>{
       this.progress[q.id] = saved[q.id]||{progress:0,completed:false};
@@ -1306,6 +1380,23 @@ const QUESTS = {
     if(!pinnedEl||!allEl) return;
     pinnedEl.innerHTML = pinned.map(id=>{ const q=this.list.find(x=>x.id===id); return q?this.cardHTML(q,true):''; }).join('');
     allEl.innerHTML = this.list.map(q=>this.cardHTML(q,pinned.includes(q.id))).join('');
+    this.renderDailyRotation();
+  },
+  renderDailyRotation(){
+    this.initPools();
+    const now=Date.now();
+    const slot=Math.floor(now/(8*3600*1000));
+    const qStart=(slot*20)%this.extra.quests.length;
+    const mStart=(slot*10)%this.extra.missions.length;
+    const cStart=(slot*3)%this.extra.challenges.length;
+    const q=this.extra.quests.slice(qStart,qStart+20);
+    const m=this.extra.missions.slice(mStart,mStart+10);
+    const c=this.extra.challenges.slice(cStart,cStart+3);
+    const nextAt=(slot+1)*(8*3600*1000);
+    const meta=document.getElementById('dailyRotationMeta');
+    if(meta) meta.textContent=`Pool: ${this.extra.quests.length} quests, ${this.extra.missions.length} missions, ${this.extra.challenges.length} challenges. Next refresh: ${new Date(nextAt).toLocaleString()}`;
+    const fill=(id,arr)=>{ const el=document.getElementById(id); if(el) el.innerHTML=arr.map(x=>`<li>${x}</li>`).join(''); };
+    fill('dailyQuestList',q); fill('dailyMissionList',m); fill('dailyChallengeList',c);
   },
   cardHTML(q, isPinned){
     const p = this.progress[q.id]||{progress:0,completed:false};
@@ -1434,6 +1525,8 @@ const SHOP = {
 const MAZE = {
   grid:[],
   width:0, height:0,
+  dirty:true,
+  claimKey(x,y,t){ return `${x},${y}:${t}`; },
   _themeFor(floor){
     if(floor<=3) return 'stone';
     if(floor<=10) return 'neon';
@@ -1460,6 +1553,7 @@ const MAZE = {
     if(startX>0) this._connectSections(startX-1, startX);
     this._placeSpecials(startX, w);
     this._placeItems(startX, w);
+    this.dirty=true;
   },
   extend(){
     const oldW = this.width;
@@ -1528,7 +1622,10 @@ const MAZE = {
         else if(r<trapDensity) cell.type='trap';
         if(floor>4 && Math.random()<0.03 && x>4){
           const tx=Math.max(1, x-(2+Math.floor(Math.random()*5)));
-          cell.warpTo={x:tx,y};
+          const target=this.grid[y]&&this.grid[y][tx];
+          if(target && target.type!=='trap' && target.type!=='locked' && !target.warpTo){
+            cell.warpTo={x:tx,y};
+          }
         }
         cell.theme = this._themeFor(floor);
       }
@@ -1539,14 +1636,20 @@ const MAZE = {
     for(let y=0;y<this.height;y++){
       for(let x=sx;x<ex;x++){
         const cell=this.grid[y]&&this.grid[y][x]; if(!cell) continue;
+        const claimed=(type)=>!!(SAVE.data.claimedCells||{})[this.claimKey(x,y,type)];
         if(cell.type==='treasure'){
-          cell.items=[{type:'chest',opened:false},{type:'coin',value:5,collected:false}];
-          if(Math.random()<diaChance+0.2) cell.items.push({type:'diamond',value:1,collected:false});
+          cell.items=[];
+          if(!claimed('chest')) cell.items.push({type:'chest',opened:false});
+          if(!claimed('coin5')) cell.items.push({type:'coin',value:5,collected:false});
+          if(Math.random()<diaChance+0.2 && !claimed('diamond1')) cell.items.push({type:'diamond',value:1,collected:false});
         } else if(cell.type==='diamond_vault'){
-          cell.items=[{type:'diamond',value:2,collected:false},{type:'diamond',value:1,collected:false}];
+          cell.items=[];
+          if(!claimed('diamond2')) cell.items.push({type:'diamond',value:2,collected:false});
+          if(!claimed('diamond1b')) cell.items.push({type:'diamond',value:1,collected:false});
         } else if(cell.type==='safe'){
-          cell.items=[{type:'coin',value:2,collected:false}];
-          if(Math.random()<0.35) cell.items.push({type:'powerup',kind:'heal',collected:false});
+          cell.items=[];
+          if(!claimed('coin2')) cell.items.push({type:'coin',value:2,collected:false});
+          if(Math.random()<0.35 && !claimed('heal')) cell.items.push({type:'powerup',kind:'heal',collected:false});
           if(Math.random()<0.3) cell.items.push({type:'coin',value:1,collected:false});
         } else if(cell.type==='trap'){
           if(Math.random()<0.3) cell.items.push({type:'coin',value:3,collected:false});
@@ -1556,7 +1659,7 @@ const MAZE = {
           if(Math.random()<0.6) cell.items.push({type:'coin',value:1,collected:false});
           if(Math.random()<0.15) cell.items.push({type:'coin',value:2,collected:false});
           if(Math.random()<diaChance) cell.items.push({type:'diamond',value:1,collected:false});
-          if(Math.random()<0.08) cell.items.push({type:'powerup',kind:Math.random()<0.5?'speed':'shield',collected:false});
+          if(Math.random()<0.1){ const kinds=['speed','shield','luck','phase']; const k=kinds[Math.floor(Math.random()*kinds.length)]; if(!claimed('pw_'+k)) cell.items.push({type:'powerup',kind:k,collected:false}); }
           if(x>12 && Math.random()<0.03) cell.items.push({type:'key',value:1,collected:false});
         }
         if(cell.type==='trap'){
@@ -1605,12 +1708,16 @@ const PLAYER = {
     if(STATE.paused) return;
     const cell = MAZE.cell(this.x, this.y); if(!cell) return;
     const dir = dx===1?'E':dx===-1?'W':dy===1?'S':'N';
-    if(cell.walls[dir]) return; // wall blocks
+    if(cell.walls[dir]){
+      const phase=this.boosts.find(b=>b.type==='phase');
+      if(phase){ phase.time=0; TOAST.show('👻 PHASE USED'); }
+      else return;
+    }
     const nx=this.x+dx, ny=this.y+dy;
     const next=MAZE.cell(nx,ny); if(!next) return;
     if(next.type==='locked' && !next.unlocked){
       if(this.keys>0){
-        this.keys--; next.unlocked=true; next.locked=false;
+        this.keys--; next.unlocked=true; next.locked=false; MAZE.dirty=true;
         TOAST.show('🗝 LOCK UNSEALED');
         PARTICLES.burst(nx*CFG.CELL+CFG.CELL/2, ny*CFG.CELL+CFG.CELL/2, '#ffd700', 26);
       } else { TOAST.show('🔒 LOCKED WALL — FIND A KEY'); return; }
@@ -1650,20 +1757,23 @@ const PLAYER = {
     const mag = SAVE.data.upgrades.coinMagnet||0;
     this._collectInRadius(mag);
     if(cell.warpTo){
-      this.x=cell.warpTo.x; this.y=cell.warpTo.y;
-      this.px=this.x; this.py=this.y;
-      TOAST.show('🌀 WARP JUMP!');
-      PARTICLES.burst(this.x*CFG.CELL+CFG.CELL/2, this.y*CFG.CELL+CFG.CELL/2, "#00e5ff", 24);
+      const t=MAZE.cell(cell.warpTo.x,cell.warpTo.y);
+      if(t && t.type!=='trap' && !(t.type==='locked'&&!t.unlocked)){
+        this.x=cell.warpTo.x; this.y=cell.warpTo.y;
+        this.px=this.x; this.py=this.y;
+        TOAST.show('🌀 WARP JUMP!');
+        PARTICLES.burst(this.x*CFG.CELL+CFG.CELL/2, this.y*CFG.CELL+CFG.CELL/2, "#00e5ff", 24);
+      }
     }
     // trap
-    if(cell.type==='trap' && cell.trap && !cell.trap.triggered){
+    if(cell.type==='trap' && cell.trap && !cell.trap.triggered){ MAZE.dirty=true;
       if(this.invShield){ this.invShield=false; TOAST.show('🛡 SHIELD BLOCKED TRAP!'); }
       else { this.takeDamage(1, cell.trap.type); cell.trap.triggered=true; }
       SAVE.data.trapsTriggered=(SAVE.data.trapsTriggered||0)+1;
       QUESTS.updateProgress('trapRoomsCleared',0); // track trap rooms cleared (no damage = incremented separately)
     }
     // checkpoint
-    if(cell.type==='checkpoint'){
+    if(cell.type==='checkpoint'){ MAZE.dirty=true;
       this.checkpointX=this.x; this.checkpointY=this.y;
       SAVE.data.totalCheckpointsUsed=(SAVE.data.totalCheckpointsUsed||0)+1;
       QUESTS.updateProgress('totalCheckpointsUsed',1);
@@ -1710,14 +1820,15 @@ const PLAYER = {
         const c=MAZE.cell(this.x+dx2,this.y+dy2); if(!c) continue;
         c.items.forEach(item=>{
           if(item.collected) return;
-          if(item.type==='coin'){ item.collected=true; this._addCoins(item.value); }
-          if(item.type==='diamond'){ item.collected=true; this._addDiamonds(item.value); }
-          if(item.type==='powerup'){ item.collected=true; this._collectPowerup(item.kind||'speed'); }
-          if(item.type==='key'){ item.collected=true; this.keys+=(item.value||1); TOAST.show('🗝 KEY FOUND'); HUD.update(); }
-          if(item.type==='chest'&&dx2===0&&dy2===0){ item.opened=true; this._openChest(); }
+          if(item.type==='coin'){ item.collected=true; this._addCoins(item.value); SAVE.data.claimedCells[MAZE.claimKey(this.x+dx2,this.y+dy2,'coin'+(item.value||1))]=1; }
+          if(item.type==='diamond'){ item.collected=true; this._addDiamonds(item.value); SAVE.data.claimedCells[MAZE.claimKey(this.x+dx2,this.y+dy2,'diamond'+(item.value||1))]=1; }
+          if(item.type==='powerup'){ item.collected=true; this._collectPowerup(item.kind||'speed'); SAVE.data.claimedCells[MAZE.claimKey(this.x+dx2,this.y+dy2,'pw_'+(item.kind||'speed'))]=1; }
+          if(item.type==='key'){ item.collected=true; this.keys+=(item.value||1); TOAST.show('🗝 KEY FOUND'); SAVE.data.claimedCells[MAZE.claimKey(this.x+dx2,this.y+dy2,'key')]=1; HUD.update(); }
+          if(item.type==='chest'&&dx2===0&&dy2===0){ item.opened=true; this._openChest(); SAVE.data.claimedCells[MAZE.claimKey(this.x,this.y,'chest')]=1; }
         });
       }
     }
+    MAZE.dirty=true;
   },
   _collectPowerup(kind){
     if(kind==='heal'){
@@ -1726,6 +1837,12 @@ const PLAYER = {
     } else if(kind==='shield'){
       this.invShield=true;
       TOAST.show('🛡 POWERUP: SHIELD READY');
+    } else if(kind==='luck'){
+      this.boosts.push({type:'luck',name:'LUCK',icon:'🍀',time:25});
+      TOAST.show('🍀 POWERUP: LUCK BOOST');
+    } else if(kind==='phase'){
+      this.boosts.push({type:'phase',name:'PHASE',icon:'👻',time:10});
+      TOAST.show('👻 POWERUP: PHASE STEP');
     } else {
       this.boosts.push({type:'speed',name:'SPEED',icon:'⚡',time:20});
       TOAST.show('⚡ POWERUP: SPEED BOOST');
@@ -1750,7 +1867,8 @@ const PLAYER = {
   },
   _openChest(){
     const r=Math.random();
-    const luckMod = 1+(SAVE.data.upgrades.treasureLuck||0)*0.15;
+    const luckBoost=this.boosts.find(b=>b.type==='luck')?0.35:0;
+    const luckMod = 1+(SAVE.data.upgrades.treasureLuck||0)*0.15+luckBoost;
     if(r<0.1*luckMod){ this._addDiamonds(Math.ceil(Math.random()*3)); TOAST.show('💎 DIAMOND CHEST!'); }
     else { this._addCoins(Math.ceil(Math.random()*15+5)*luckMod); }
     QUESTS.updateProgress('chestsOpened',1);
@@ -1827,6 +1945,8 @@ const PARTICLES = {
 
 // ---- RENDERER ----
 const RENDERER = {
+  mapCache:null,
+  mapCtx:null,
   themeColors:{
     stone:{floor:'#0f0f18',wall:'#1e1e30',wallBright:'#2a2a45',accent:'#333355'},
     neon:{floor:'#050510',wall:'#003333',wallBright:'#005555',accent:'#00e5ff'},
@@ -1853,22 +1973,25 @@ const RENDERER = {
     ctx.fillRect(0,0,cw,ch);
     const cs=CFG.CELL;
     const offX=CAM.x, offY=CAM.y;
-    const startCX=Math.max(0,Math.floor(offX/cs)-1);
-    const endCX=Math.min(MAZE.width-1,Math.ceil((offX+cw)/cs)+1);
-    const startCY=Math.max(0,Math.floor(offY/cs)-1);
-    const endCY=Math.min(MAZE.height-1,Math.ceil((offY+ch)/cs)+1);
-    for(let y=startCY;y<=endCY;y++){
-      for(let x=startCX;x<=endCX;x++){
-        const cell=MAZE.cell(x,y); if(!cell) continue;
-        this.drawCell(ctx,cell,x,y,offX,offY,cs);
-      }
+    if(!this.mapCache || this.mapCache.width!==MAZE.width*cs || this.mapCache.height!==MAZE.height*cs){
+      this.mapCache=document.createElement('canvas');
+      this.mapCache.width=MAZE.width*cs; this.mapCache.height=MAZE.height*cs;
+      this.mapCtx=this.mapCache.getContext('2d');
+      MAZE.dirty=true;
     }
-    // draw player
+    if(MAZE.dirty){
+      const mc=this.mapCtx;
+      mc.clearRect(0,0,this.mapCache.width,this.mapCache.height);
+      for(let y=0;y<MAZE.height;y++) for(let x=0;x<MAZE.width;x++){
+        const cell=MAZE.cell(x,y); if(cell) this.drawCell(mc,cell,x,y,0,0,cs,true);
+      }
+      MAZE.dirty=false;
+    }
+    ctx.drawImage(this.mapCache, offX, offY, cw, ch, 0,0,cw,ch);
     this.drawPlayer(ctx, offX, offY, cs);
-    // draw particles
     PARTICLES.draw(ctx, offX, offY);
   },
-  drawCell(ctx,cell,x,y,offX,offY,cs){
+  drawCell(ctx,cell,x,y,offX,offY,cs,cacheOnly=false){
     const px=x*cs-offX, py=y*cs-offY;
     const tc=this.themeColors[cell.theme]||this.themeColors.stone;
     const typeC=this.cellTypeColors[cell.type];
@@ -1907,6 +2030,7 @@ const RENDERER = {
     if(cell.walls.W) ctx.fillRect(px,py,wt,cs);
     if(cell.walls.E) ctx.fillRect(px+cs-wt,py,wt,cs);
     if(cell.warpTo) this.drawWarpMarker(ctx,px,py,cs);
+    if(cacheOnly) return;
   },
   drawPlayer(ctx,offX,offY,cs){
     const px=PLAYER.px*cs-offX+cs/2;
@@ -2358,6 +2482,7 @@ const GAME = {
     SAVE.load();
     QUESTS.load();
     TOAST.init();
+    UI_CONFIRM.init();
     BGM.init();
     BGANIM.init();
     MINIMAP.init();
@@ -2378,7 +2503,7 @@ const GAME = {
   },
 
   newRun(force=false){
-    if(!force && (SAVE.data.checkpoints||[]).length && !confirm('Start NEW RUN? Existing continue progress is kept, but your active run will restart.')) return;
+    if(!force && (SAVE.data.checkpoints||[]).length){ UI_CONFIRM.ask({title:'START NEW RUN',message:'Existing continue progress is kept, but your active run will restart. Continue?'}).then(ok=>{ if(ok) this.newRun(true); }); return; }
     SCREENS.hideAll();
     SAVE.data.totalRuns = (SAVE.data.totalRuns||0)+1;
     MAZE.grid=[]; MAZE.width=0; MAZE.height=0;
@@ -2510,9 +2635,11 @@ const GAME = {
     TOAST.show('🚩 RETURNED TO CHECKPOINT');
   },
   returnToMenu(){
-    if(!confirm('Return to menu and end this run?')) return;
-    this.resume();
-    this._endRun('escape');
+    UI_CONFIRM.ask({title:'END RUN',message:'Return to menu and end this run?'}).then(ok=>{
+      if(!ok) return;
+      this.resume();
+      this._endRun('escape');
+    });
   },
   playerDied(){
     SAVE.data.totalDeaths=(SAVE.data.totalDeaths||0)+1;
