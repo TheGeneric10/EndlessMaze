@@ -834,6 +834,7 @@ const SAVE = {
       this.data.lastSave = Date.now();
       localStorage.setItem(this.KEY, JSON.stringify(this.data));
     }catch(e){}
+    if(window.AUTH && this.data && this.data.profile && this.data.profile.signedIn){ AUTH.syncToCloud(); }
   },
   exportSave(){ TOAST.show('SIGN IN TO SYNC PROGRESS'); },
   importSave(){ TOAST.show('SIGN IN TO SYNC PROGRESS'); },
@@ -869,8 +870,35 @@ const AUTH = {
     appId:"1:272113167212:web:7d562f3b694a82bf292149",
     measurementId:"G-J77YCHHSWF"
   },
+  fb:null,
+  _initPromise:null,
   open(){ SCREENS.show('authScreen'); this.render(); },
-  init(){ this.render(); },
+  init(){ this.render(); this.initFirebase(); },
+  initFirebase(){
+    if(this._initPromise) return this._initPromise;
+    this._initPromise = import('https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js').then(async ({initializeApp})=>{
+      const authMod = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js');
+      const dbMod = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js');
+      const app = initializeApp(this.firebaseConfig);
+      const auth = authMod.getAuth(app);
+      const db = dbMod.getDatabase(app);
+      const provider = new authMod.GoogleAuthProvider();
+      this.fb = {app,auth,db,provider,authMod,dbMod};
+      authMod.onAuthStateChanged(auth, user=>{
+        if(user) this._onFirebaseUser(user);
+      });
+      return this.fb;
+    }).catch(()=>{
+      TOAST.show('ACCOUNT SERVICE UNAVAILABLE');
+      return null;
+    });
+    return this._initPromise;
+  },
+  async _ensureFirebase(){
+    if(this.fb) return true;
+    const fb = await this.initFirebase();
+    return !!fb;
+  },
   _read(){
     const email=(document.getElementById('authEmail')||{}).value||'';
     const pass=(document.getElementById('authPass')||{}).value||'';
@@ -880,33 +908,116 @@ const AUTH = {
   _secureBlob(payload){
     return btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).split('').reverse().join('');
   },
-  signUp(){
+  _uidPath(uid){
+    return `EndlessMaze/users/${uid}`;
+  },
+  async _onFirebaseUser(user){
+    if(!await this._ensureFirebase()) return;
+    const {db,dbMod} = this.fb;
+    const uidPath = this._uidPath(user.uid);
+    const snap = await dbMod.get(dbMod.ref(db, uidPath));
+    const remote = snap.exists() ? (snap.val()||{}) : {};
+    const remoteProfile = remote.profile||{};
+    const remoteSocial = remote.social||{};
+    SAVE.data.profile={
+      ...SAVE.data.profile,
+      ...remoteProfile,
+      signedIn:true,
+      guest:false,
+      uid:user.uid,
+      email:user.email||'',
+      username:remoteProfile.username||user.displayName||SAVE.data.profile.username||'Player',
+      authProvider:(user.providerData&&user.providerData[0]&&user.providerData[0].providerId)||'password'
+    };
+    SAVE.data.social={
+      friends:remoteSocial.friends||SAVE.data.social.friends||[],
+      followers:remoteSocial.followers||SAVE.data.social.followers||[],
+      following:remoteSocial.following||SAVE.data.social.following||[],
+      privacy:{...SAVE.data.social.privacy,...(remoteSocial.privacy||{})}
+    };
+    await this.syncToCloud();
+    SAVE.save();
+    this.render();
+    updateMainMenuStats();
+  },
+  async syncToCloud(){
+    if(!SAVE.data.profile.signedIn || !SAVE.data.profile.uid) return;
+    if(!await this._ensureFirebase()) return;
+    const {db,dbMod} = this.fb;
+    const uid = SAVE.data.profile.uid;
+    const payload={
+      profile:SAVE.data.profile,
+      social:SAVE.data.social,
+      stats:{coins:SAVE.data.coins||0,diamonds:SAVE.data.diamonds||0,bestFloor:SAVE.data.bestFloor||0,totalRuns:SAVE.data.totalRuns||0},
+      updated:Date.now()
+    };
+    SAVE.data.cloudBlob=this._secureBlob(payload);
+    const safeUsername=(SAVE.data.profile.username||'Player').slice(0,24);
+    await dbMod.set(dbMod.ref(db,this._uidPath(uid)),{
+      encrypted:SAVE.data.cloudBlob,
+      profile:{
+        username:safeUsername,
+        email:SAVE.data.profile.email||'',
+        badge:SAVE.data.profile.badge||'verified',
+        usernameChanges:SAVE.data.profile.usernameChanges||0,
+        lastUsernameChange:SAVE.data.profile.lastUsernameChange||0,
+        authProvider:SAVE.data.profile.authProvider||'password'
+      },
+      social:SAVE.data.social,
+      stats:payload.stats,
+      updatedAt:dbMod.serverTimestamp()
+    });
+    SAVE.save();
+  },
+  async signUp(){
     const {email,pass,user}=this._read();
     if(!email||!pass||!user){ TOAST.show('ENTER EMAIL, PASSWORD, USERNAME'); return; }
-    SAVE.data.profile={...SAVE.data.profile,signedIn:true,guest:false,email,username:user,authProvider:'email'};
-    SAVE.data.cloudBlob=this._secureBlob({profile:SAVE.data.profile,social:SAVE.data.social,updated:Date.now()});
-    SAVE.save(); this.render(); SCREENS.show('mainMenu');
-    TOAST.show('WELCOME TO ENDLESS MAZE');
+    if(!await this._ensureFirebase()) return;
+    const {auth,authMod} = this.fb;
+    try{
+      const cred = await authMod.createUserWithEmailAndPassword(auth,email,pass);
+      await authMod.updateProfile(cred.user,{displayName:user});
+      await this._onFirebaseUser(cred.user);
+      SAVE.data.profile={...SAVE.data.profile,username:user,authProvider:'password'};
+      await this.syncToCloud();
+      SCREENS.show('mainMenu');
+      TOAST.show('ACCOUNT CREATED');
+    }catch(e){ TOAST.show((e&&e.code?e.code:'SIGN UP FAILED').replace('auth/','').replaceAll('-',' ').toUpperCase()); }
   },
-  signIn(){
+  async signIn(){
     const {email,pass}=this._read();
     if(!email||!pass){ TOAST.show('ENTER EMAIL AND PASSWORD'); return; }
-    SAVE.data.profile={...SAVE.data.profile,signedIn:true,guest:false,email,authProvider:'email'};
-    SAVE.data.cloudBlob=this._secureBlob({profile:SAVE.data.profile,updated:Date.now()});
-    SAVE.save(); this.render(); SCREENS.show('mainMenu');
-    TOAST.show('SIGNED IN');
+    if(!await this._ensureFirebase()) return;
+    const {auth,authMod} = this.fb;
+    try{
+      const cred = await authMod.signInWithEmailAndPassword(auth,email,pass);
+      await this._onFirebaseUser(cred.user);
+      SCREENS.show('mainMenu');
+      TOAST.show('SIGNED IN');
+    }catch(e){ TOAST.show((e&&e.code?e.code:'SIGN IN FAILED').replace('auth/','').replaceAll('-',' ').toUpperCase()); }
   },
-  google(){
-    SAVE.data.profile={...SAVE.data.profile,signedIn:true,guest:false,email:'google-user@endlessmaze.gg',username:SAVE.data.profile.username||'NeonRunner',authProvider:'google'};
-    SAVE.save(); this.render(); SCREENS.show('mainMenu');
-    TOAST.show('GOOGLE SIGN-IN COMPLETE');
+  async google(){
+    if(!await this._ensureFirebase()) return;
+    const {auth,authMod,provider} = this.fb;
+    try{
+      const cred = await authMod.signInWithPopup(auth,provider);
+      await this._onFirebaseUser(cred.user);
+      SAVE.data.profile={...SAVE.data.profile,authProvider:'google.com'};
+      await this.syncToCloud();
+      SCREENS.show('mainMenu');
+      TOAST.show('GOOGLE SIGN-IN COMPLETE');
+    }catch(e){ TOAST.show((e&&e.code?e.code:'GOOGLE SIGN-IN FAILED').replace('auth/','').replaceAll('-',' ').toUpperCase()); }
   },
-  guest(){
-    SAVE.data.profile={...SAVE.data.profile,signedIn:false,guest:true,email:'',authProvider:'guest'};
+  async guest(){
+    if(await this._ensureFirebase()){
+      const {auth,authMod} = this.fb;
+      if(auth.currentUser) await authMod.signOut(auth);
+    }
+    SAVE.data.profile={...SAVE.data.profile,signedIn:false,guest:true,email:'',uid:'',authProvider:'guest'};
     SAVE.save(); this.render(); SCREENS.show('mainMenu');
     TOAST.show('CONTINUING AS GUEST');
   },
-  changeUsername(){
+  async changeUsername(){
     const p=SAVE.data.profile;
     const week=7*24*3600*1000;
     if((p.usernameChanges||0)>=2 && Date.now()-(p.lastUsernameChange||0)<week){ TOAST.show('USERNAME LIMIT REACHED (7D)'); return; }
@@ -915,19 +1026,21 @@ const AUTH = {
     p.username=next.slice(0,18);
     p.usernameChanges=(p.usernameChanges||0)+1;
     p.lastUsernameChange=Date.now();
+    await this.syncToCloud();
     SAVE.save(); this.render();
   },
-  cyclePrivacy(key){
+  async cyclePrivacy(key){
     const vals=['PUBLIC','FRIENDS ONLY','PRIVATE'];
     const cur=SAVE.data.social.privacy[key]||'PRIVATE';
     const idx=(vals.indexOf(cur)+1)%vals.length;
     SAVE.data.social.privacy[key]=vals[idx];
+    await this.syncToCloud();
     SAVE.save(); this.render();
   },
   render(){
     const p=SAVE.data.profile||{};
     const social=SAVE.data.social||{friends:[],followers:[],following:[],privacy:{friends:'PRIVATE',followers:'PRIVATE',following:'PRIVATE'}};
-    const badge = p.authProvider==='google' ? 'VERIFIED ◻' : (p.username||'').toLowerCase()==='admin' ? 'ADMIN ◻' : 'VERIFIED ◻';
+    const badge = p.authProvider==='google.com' ? 'VERIFIED ◻' : (p.username||'').toLowerCase()==='admin' ? 'ADMIN ◻' : 'VERIFIED ◻';
     const nameEl=document.getElementById('accountName');
     if(nameEl) nameEl.textContent=(p.username||'Guest');
     const badgeEl=document.getElementById('accountBadge');
